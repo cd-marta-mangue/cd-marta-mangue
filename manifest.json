@@ -1,0 +1,22 @@
+{
+  "name": "C.D. Marta Mangué",
+  "short_name": "MM Handball",
+  "description": "Gestión deportiva del C.D. Marta Mangué — Donde los sueños se entrenan",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#0f0f0f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
