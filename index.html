@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="MM Handball"/>
   <title>C.D. Marta Mangué</title>
   <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root{--b:#0f0f0f;--d:#1a1a1a;--s:#242424;--g:#c9a227;--gl:#e8c84a;--gp:#2a2310;--t:#f0ece0;--m:#888880;--br:rgba(201,162,39,0.2);--bs:rgba(201,162,39,0.5);--red:#e05555;--green:#7dc97d;--blue:#6ab0f5;--blue-bg:rgba(85,153,232,0.1);--blue-border:rgba(85,153,232,0.3)}
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -767,7 +768,21 @@ window.renderAdminPlantilla=async function(){
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div class="section-title" style="margin:0">${currentCat} (${players.length})</div>
-      <button class="btn-sm-gold" style="padding:6px 14px;font-size:12px" onclick="document.getElementById('add-player-form').style.display='block'">+ Añadir</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn-sm-out" style="padding:6px 12px;font-size:12px" onclick="openImportForm()">📥 Excel</button>
+        <button class="btn-sm-gold" style="padding:6px 14px;font-size:12px" onclick="document.getElementById('add-player-form').style.display='block';document.getElementById('import-form').style.display='none'">+ Añadir</button>
+      </div>
+    </div>
+    <div class="form-card" id="import-form" style="display:none">
+      <div class="form-title">Importar desde Excel</div>
+      <div style="font-size:11px;color:var(--m);margin-bottom:10px">El Excel debe tener 3 columnas: <span style="color:var(--t);font-weight:700">Nombre · Apellidos · Dorsal</span>. Sin cabecera, una fila por jugador/a.</div>
+      <div class="form-field"><label>Archivo Excel o CSV</label><input type="file" id="import-file" accept=".xlsx,.csv" style="background:var(--s);border:.5px solid var(--br);border-radius:8px;padding:9px;color:var(--t);font-size:13px;width:100%;" onchange="previewImport(this)"\/></div>
+      <div id="import-preview" style="margin-bottom:8px"></div>
+      <div class="form-btns">
+        <button class="btn-sm-gold" onclick="importPlayers()">Importar</button>
+        <button class="btn-sm-out" onclick="document.getElementById('import-form').style.display='none';document.getElementById('import-preview').innerHTML=''">Cancelar</button>
+      </div>
+      <div id="import-msg" style="font-size:12px;text-align:center;margin-top:8px;min-height:16px"></div>
     </div>
     <div class="plist" id="admin-plist">
       ${players.length===0?'<div class="empty-state">Sin jugadores/as. Añade el/la primero/a.</div>':players.map(p=>`<div class="prow"><div class="pnum">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}</div><button class="del-btn" onclick="deletePlayer('${p.id}')">Baja</button></div>`).join('')}
@@ -784,6 +799,54 @@ window.addPlayer=async function(){
 };
 window.deletePlayer=async function(id){if(!confirm('¿Dar de baja a este/esta jugador/a?'))return;await updateDoc(doc(db,'players',id),{active:false});await renderAdminPlantilla();};
 
+
+let importData=[];
+window.openImportForm=function(){document.getElementById("import-form").style.display="block";document.getElementById("add-player-form").style.display="none";document.getElementById("import-preview").innerHTML="";document.getElementById("import-msg").textContent="";importData=[];};
+
+window.previewImport=function(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  if(file.name.endsWith(".csv")){
+    reader.onload=function(e){
+      const lines=e.target.result.split(/
+?
+/).filter(l=>l.trim());
+      importData=lines.map(l=>{const p=l.split(/[;,	]/);return{name:(p[0]||"").trim(),surname:(p[1]||"").trim(),dorsal:parseInt(p[2])||0};}).filter(p=>p.name&&p.dorsal);
+      showImportPreview();
+    }; reader.readAsText(file,"UTF-8");
+  } else {
+    reader.onload=function(e){
+      const data=new Uint8Array(e.target.result);
+      try{
+        const wb=XLSX.read(data,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+        importData=rows.filter(r=>r[0]).map(r=>({name:String(r[0]||"").trim(),surname:String(r[1]||"").trim(),dorsal:parseInt(r[2])||0})).filter(p=>p.name&&p.dorsal);
+        showImportPreview();
+      } catch(ex){document.getElementById("import-msg").style.color="var(--red)";document.getElementById("import-msg").textContent="Error leyendo el Excel. Prueba a guardarlo como CSV.";}
+    }; reader.readAsArrayBuffer(file);
+  }
+};
+
+function showImportPreview(){
+  const el=document.getElementById("import-preview");
+  if(!importData.length){el.innerHTML="<div style='color:var(--red);font-size:12px'>No se encontraron datos válidos. Revisa el formato.</div>";return;}
+  el.innerHTML=`<div style="font-size:11px;color:var(--green);margin-bottom:6px">✓ ${importData.length} jugadores/as detectados/as:</div><div class="plist" style="max-height:200px;overflow-y:auto">${importData.slice(0,20).map(p=>`<div class="prow"><div class="pnum">${p.dorsal}</div><div class="pname">${p.name} ${p.surname}</div></div>`).join("")}${importData.length>20?`<div style="text-align:center;padding:8px;font-size:11px;color:var(--m)">+${importData.length-20} más...</div>`:""}</div>`;
+}
+
+window.importPlayers=async function(){
+  if(!importData.length){document.getElementById("import-msg").style.color="var(--red)";document.getElementById("import-msg").textContent="Selecciona un archivo primero.";return;}
+  const msg=document.getElementById("import-msg");
+  msg.style.color="var(--m)"; msg.textContent="Importando...";
+  let count=0;
+  for(const p of importData){
+    await addDoc(collection(db,"players"),{name:p.name,surname:p.surname,dorsal:p.dorsal,category:currentCat,active:true,createdBy:currentUser.uid,createdAt:serverTimestamp()});
+    count++;
+  }
+  msg.style.color="var(--green)"; msg.textContent="✓ "+count+" jugadores/as importados/as correctamente.";
+  importData=[];
+  setTimeout(()=>{document.getElementById("import-form").style.display="none";renderAdminPlantilla();},1500);
+};
 window.renderAdminUsuarios=async function(){
   const el=document.getElementById('inicio-content');
   const snap=await getDocs(collection(db,'users'));
