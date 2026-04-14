@@ -804,34 +804,43 @@ let importData=[];
 window.openImportForm=function(){document.getElementById("import-form").style.display="block";document.getElementById("add-player-form").style.display="none";document.getElementById("import-preview").innerHTML="";document.getElementById("import-msg").textContent="";importData=[];};
 
 window.previewImport=function(input){
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  if(file.name.endsWith(".csv")){
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  if(file.name.toLowerCase().endsWith(".csv")){
     reader.onload=function(e){
-      const lines=e.target.result.split(/
-?
-/).filter(l=>l.trim());
-      importData=lines.map(l=>{const p=l.split(/[;,	]/);return{name:(p[0]||"").trim(),surname:(p[1]||"").trim(),dorsal:parseInt(p[2])||0};}).filter(p=>p.name&&p.dorsal);
+      var text=e.target.result;
+      var lines=text.split("\n").filter(function(l){return l.trim();});
+      importData=lines.map(function(l){
+        var row=l.replace("\n","").split(/[;,\t]/);
+        return{name:(row[0]||"").trim(),surname:(row[1]||"").trim(),dorsal:parseInt(row[2])||0};
+      }).filter(function(p){return p.name&&p.dorsal;});
       showImportPreview();
     }; reader.readAsText(file,"UTF-8");
   } else {
     reader.onload=function(e){
-      const data=new Uint8Array(e.target.result);
+      var data=new Uint8Array(e.target.result);
       try{
-        const wb=XLSX.read(data,{type:"array"});
-        const ws=wb.Sheets[wb.SheetNames[0]];
-        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
-        importData=rows.filter(r=>r[0]).map(r=>({name:String(r[0]||"").trim(),surname:String(r[1]||"").trim(),dorsal:parseInt(r[2])||0})).filter(p=>p.name&&p.dorsal);
+        var wb=XLSX.read(data,{type:"array"});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+        importData=rows.filter(function(r){return r[0];}).map(function(r){
+          return{name:String(r[0]||"").trim(),surname:String(r[1]||"").trim(),dorsal:parseInt(r[2])||0};
+        }).filter(function(p){return p.name&&p.dorsal;});
         showImportPreview();
-      } catch(ex){document.getElementById("import-msg").style.color="var(--red)";document.getElementById("import-msg").textContent="Error leyendo el Excel. Prueba a guardarlo como CSV.";}
+      }catch(ex){
+        document.getElementById("import-msg").style.color="var(--red)";
+        document.getElementById("import-msg").textContent="Error leyendo el Excel. Prueba a guardarlo como CSV.";
+      }
     }; reader.readAsArrayBuffer(file);
   }
 };
 
 function showImportPreview(){
-  const el=document.getElementById("import-preview");
-  if(!importData.length){el.innerHTML="<div style='color:var(--red);font-size:12px'>No se encontraron datos válidos. Revisa el formato.</div>";return;}
-  el.innerHTML=`<div style="font-size:11px;color:var(--green);margin-bottom:6px">✓ ${importData.length} jugadores/as detectados/as:</div><div class="plist" style="max-height:200px;overflow-y:auto">${importData.slice(0,20).map(p=>`<div class="prow"><div class="pnum">${p.dorsal}</div><div class="pname">${p.name} ${p.surname}</div></div>`).join("")}${importData.length>20?`<div style="text-align:center;padding:8px;font-size:11px;color:var(--m)">+${importData.length-20} más...</div>`:""}</div>`;
+  var el=document.getElementById("import-preview");
+  if(!importData.length){el.innerHTML="<div style='color:var(--red);font-size:12px'>No se encontraron datos. Revisa el formato.</div>";return;}
+  var rows=importData.slice(0,20).map(function(p){return '<div class="prow"><div class="pnum">'+p.dorsal+'</div><div class="pname">'+p.name+' '+p.surname+'</div></div>';}).join("");
+  var more=importData.length>20?'<div style="text-align:center;padding:8px;font-size:11px;color:var(--m)">+'+(importData.length-20)+' mas...</div>':"";
+  el.innerHTML='<div style="font-size:11px;color:var(--green);margin-bottom:6px">OK: '+importData.length+' jugadores/as detectados/as:</div><div class="plist" style="max-height:200px;overflow-y:auto">'+rows+more+'</div>';
 }
 
 window.importPlayers=async function(){
