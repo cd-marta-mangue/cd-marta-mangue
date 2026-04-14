@@ -10,783 +10,612 @@
   <title>C.D. Marta Mangué</title>
   <link rel="manifest" href="manifest.json"/>
   <style>
-    :root {
-      --b: #0f0f0f;
-      --d: #1a1a1a;
-      --s: #242424;
-      --g: #c9a227;
-      --gl: #e8c84a;
-      --gp: #2a2310;
-      --t: #f0ece0;
-      --m: #888880;
-      --br: rgba(201,162,39,0.2);
-      --bs: rgba(201,162,39,0.5);
-      --red: #e05555;
-      --green: #7dc97d;
-      --blue: #6ab0f5;
-      --blue-bg: rgba(85,153,232,0.1);
-      --blue-border: rgba(85,153,232,0.3);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--b); color: var(--t); min-height: 100vh; overflow-x: hidden; }
-
-    /* ---- AUTH ---- */
-    #auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
-    .auth-logo { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--g); overflow: hidden; margin-bottom: 16px; }
-    .auth-logo img { width: 100%; height: 100%; object-fit: cover; }
-    .auth-club { font-size: 18px; font-weight: 700; letter-spacing: .04em; color: var(--t); text-align: center; }
-    .auth-lema { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--g); margin-top: 4px; margin-bottom: 32px; text-align: center; }
-    .auth-card { background: var(--d); border: .5px solid var(--bs); border-radius: 16px; padding: 24px; width: 100%; max-width: 360px; }
-    .auth-title { font-size: 13px; font-weight: 600; color: var(--g); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
-    .field { margin-bottom: 16px; }
-    .field label { font-size: 10px; color: var(--m); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 6px; }
-    .field input { width: 100%; background: var(--s); border: .5px solid var(--br); border-radius: 8px; padding: 11px 13px; color: var(--t); font-size: 15px; outline: none; }
-    .field input:focus { border-color: var(--bs); }
-    .btn-gold { width: 100%; padding: 13px; border-radius: 10px; background: var(--g); color: var(--b); font-size: 15px; font-weight: 700; border: none; cursor: pointer; margin-top: 4px; }
-    .auth-error { color: var(--red); font-size: 12px; text-align: center; margin-top: 10px; min-height: 16px; }
-
-    /* ---- APP SHELL ---- */
-    #app { display: none; flex-direction: column; min-height: 100vh; max-width: 480px; margin: 0 auto; }
-    .header { background: var(--b); border-bottom: .5px solid var(--br); padding: 10px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
-    .header-logo { width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--g); overflow: hidden; flex-shrink: 0; }
-    .header-logo img { width: 100%; height: 100%; object-fit: cover; }
-    .header-text { flex: 1; }
-    .header-club { font-size: 11px; font-weight: 600; color: var(--t); letter-spacing: .03em; }
-    .header-lema { font-size: 8px; color: var(--g); letter-spacing: .06em; text-transform: uppercase; }
-    .header-right { display: flex; align-items: center; gap: 8px; }
-    .cat-chip { background: var(--gp); border: .5px solid var(--bs); border-radius: 20px; padding: 4px 10px; color: var(--g); font-size: 10px; cursor: pointer; }
-    .logout-btn { background: transparent; border: .5px solid var(--br); border-radius: 8px; color: var(--m); font-size: 11px; padding: 4px 8px; cursor: pointer; }
-
-    /* ---- SCREENS ---- */
-    .screen { display: none; flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 80px; }
-    .screen.active { display: block; }
-
-    /* ---- TAB BAR ---- */
-    .tabbar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; display: flex; background: var(--d); border-top: .5px solid var(--br); padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
-    .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 4px 8px; cursor: pointer; border: none; background: transparent; }
-    .tab-icon { font-size: 20px; }
-    .tab-label { font-size: 9px; color: var(--m); }
-    .tab.active .tab-label { color: var(--g); font-weight: 600; }
-
-    /* ---- COMPONENTS ---- */
-    .section-title { font-size: 10px; font-weight: 600; letter-spacing: .1em; color: var(--g); text-transform: uppercase; margin-bottom: 10px; margin-top: 18px; }
-    .section-title:first-child { margin-top: 0; }
-    .card { background: var(--d); border: .5px solid var(--br); border-radius: 12px; padding: 13px 15px; margin-bottom: 10px; }
-    .card-title { font-size: 14px; font-weight: 600; color: var(--t); }
-    .card-sub { font-size: 12px; color: var(--m); margin-top: 3px; }
-    .card-row { display: flex; justify-content: space-between; align-items: center; }
-    .badge { font-size: 10px; padding: 3px 9px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
-    .badge-gold { background: var(--gp); color: var(--gl); border: .5px solid var(--bs); }
-    .badge-admin { background: var(--gp); color: var(--gl); border: .5px solid var(--bs); }
-    .badge-coach { background: var(--blue-bg); color: var(--blue); border: .5px solid var(--blue-border); }
-    .badge-green { background: rgba(125,201,125,.15); color: var(--green); }
-    .badge-red { background: rgba(224,85,85,.12); color: var(--red); }
-    .nav-btn { display: flex; align-items: center; justify-content: space-between; padding: 13px 14px; border: .5px solid var(--br); border-radius: 12px; background: var(--d); margin-bottom: 8px; cursor: pointer; font-size: 14px; color: var(--t); width: 100%; text-align: left; }
-    .nav-btn:active { background: var(--s); }
-    .nav-arrow { color: var(--g); font-size: 16px; }
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-    .stat-card { background: var(--d); border: .5px solid var(--br); border-radius: 10px; padding: 12px; text-align: center; }
-    .stat-val { font-size: 26px; font-weight: 700; color: var(--gl); }
-    .stat-lbl { font-size: 10px; color: var(--m); margin-top: 2px; }
-    .access-banner { border-radius: 10px; padding: 10px 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-    .btn-outline { width: 100%; padding: 12px; border-radius: 10px; background: transparent; color: var(--g); border: .5px solid var(--bs); cursor: pointer; font-size: 14px; margin-top: 8px; }
-    .plist { background: var(--d); border: .5px solid var(--br); border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
-    .prow { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-bottom: .5px solid var(--br); }
-    .prow:last-child { border-bottom: none; }
-    .pnum { width: 30px; height: 30px; border-radius: 50%; background: var(--gp); border: .5px solid var(--bs); color: var(--g); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-    .pnum.inv { background: var(--blue-bg); border-color: var(--blue-border); color: var(--blue); }
-    .pname { flex: 1; font-size: 13px; color: var(--t); }
-    .psub { font-size: 10px; color: var(--m); }
-
-    /* ---- FORMS ---- */
-    .form-card { background: var(--d); border: .5px solid var(--bs); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-    .form-title { font-size: 11px; color: var(--g); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-    .form-field { margin-bottom: 10px; }
-    .form-field label { font-size: 10px; color: var(--m); text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 4px; }
-    .form-field input, .form-field select { width: 100%; background: var(--s); border: .5px solid var(--br); border-radius: 8px; padding: 9px 11px; color: var(--t); font-size: 14px; outline: none; }
-    .form-field input:focus, .form-field select:focus { border-color: var(--bs); }
-    .form-field select option { background: var(--s); }
-    .form-btns { display: flex; gap: 8px; margin-top: 4px; }
-    .btn-sm-gold { padding: 10px 16px; border-radius: 8px; background: var(--g); color: var(--b); font-size: 13px; font-weight: 700; border: none; cursor: pointer; flex: 1; }
-    .btn-sm-out { padding: 10px 16px; border-radius: 8px; background: transparent; color: var(--g); border: .5px solid var(--bs); font-size: 13px; cursor: pointer; }
-
-    /* ---- MATCH ---- */
-    .scoreboard { background: var(--d); border: .5px solid var(--br); border-radius: 14px; padding: 18px 14px; margin-bottom: 14px; text-align: center; }
-    .score-teams { display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .score-team { color: var(--m); font-size: 11px; flex: 1; }
-    .score-team.home { text-align: right; color: var(--g); }
-    .score-nums { display: flex; align-items: center; gap: 4px; }
-    .score-n { color: var(--t); font-size: 38px; font-weight: 700; min-width: 44px; text-align: center; }
-    .score-sep { color: var(--m); font-size: 28px; }
-    .score-meta { color: var(--m); font-size: 11px; margin-top: 8px; }
-    .score-period { color: var(--g); font-size: 12px; font-weight: 600; margin-top: 2px; }
-    .ev-panel { background: var(--d); border: .5px solid var(--bs); border-radius: 12px; padding: 13px; margin-bottom: 10px; display: none; }
-    .ev-player { font-size: 12px; color: var(--g); font-weight: 600; margin-bottom: 10px; }
-    .ev-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-    .ev-btn { padding: 7px 11px; border-radius: 8px; font-size: 12px; background: var(--s); border: .5px solid var(--br); cursor: pointer; color: var(--t); }
-    .ev-btn.gol { border-color: rgba(125,201,125,.4); color: var(--green); }
-    .ev-btn.ama { border-color: rgba(232,200,74,.4); color: var(--gl); }
-    .ev-btn.roj { border-color: rgba(224,85,85,.4); color: var(--red); }
-    .ev-btn.azu { border-color: rgba(106,176,245,.4); color: var(--blue); }
-    .ev-btn.exc { border-color: rgba(224,160,85,.4); color: #e0a055; }
-    .ev-log { font-size: 11px; color: var(--green); margin-top: 8px; min-height: 16px; }
-
-    /* ---- ATTENDANCE ---- */
-    .att-row { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-bottom: .5px solid var(--br); }
-    .att-row:last-child { border-bottom: none; }
-    .att-btns { display: flex; gap: 6px; margin-left: auto; }
-    .att-btn { padding: 5px 12px; border-radius: 7px; font-size: 12px; border: .5px solid var(--br); background: var(--s); color: var(--m); cursor: pointer; }
-    .att-btn.yes { background: rgba(125,201,125,.15); color: var(--green); border-color: rgba(125,201,125,.4); }
-    .att-btn.no { background: rgba(224,85,85,.1); color: var(--red); border-color: rgba(224,85,85,.3); }
-
-    /* ---- CALENDAR ---- */
-    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .cal-nav button { background: transparent; border: .5px solid var(--br); border-radius: 8px; color: var(--g); font-size: 16px; padding: 4px 12px; cursor: pointer; }
-    .cal-month { font-size: 13px; font-weight: 600; color: var(--t); letter-spacing: .05em; }
-    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 12px; }
-    .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; border-radius: 8px; color: var(--m); cursor: pointer; position: relative; gap: 1px; }
-    .cal-day.hdr { font-size: 9px; color: var(--g); cursor: default; }
-    .cal-day.today { outline: 1.5px solid var(--g); color: var(--gl); font-weight: 700; }
-    .cal-day:not(.hdr):hover { background: var(--s); }
-    .cal-dots { display: flex; gap: 2px; }
-    .cal-dot { width: 4px; height: 4px; border-radius: 50%; }
-    .cal-dot.e { background: var(--blue); }
-    .cal-dot.p { background: var(--gl); }
-    .cal-dot.c { background: #555; }
-    .cal-dot.s { background: var(--red); }
-    .ev-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--d); border-radius: 10px; margin-bottom: 8px; border-left: 3px solid transparent; }
-    .ev-item.ev-e { border-color: var(--blue); }
-    .ev-item.ev-p { border-color: var(--gl); }
-    .ev-item.ev-c { border-color: #555; opacity: .75; }
-    .ev-item.ev-s { border-color: var(--red); }
-    .ev-body { flex: 1; }
-    .ev-title { font-size: 13px; font-weight: 600; color: var(--t); }
-    .ev-meta { font-size: 11px; color: var(--m); margin-top: 2px; }
-    .ev-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; display: inline-block; margin-top: 4px; }
-    .tag-e { background: var(--blue-bg); color: var(--blue); }
-    .tag-p { background: var(--gp); color: var(--gl); }
-    .tag-c { background: rgba(100,100,100,.2); color: #888; }
-    .tag-s { background: rgba(224,85,85,.1); color: var(--red); }
-
-    /* ---- MODAL ---- */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; align-items: flex-end; justify-content: center; }
-    .modal-overlay.show { display: flex; }
-    .modal { background: var(--d); border-radius: 20px 20px 0 0; border: 1px solid var(--bs); width: 100%; max-width: 480px; padding: 20px; max-height: 85vh; overflow-y: auto; }
-    .modal-title { color: var(--g); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; }
-    .type-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-    .type-btn { flex: 1; min-width: 70px; padding: 9px 6px; border-radius: 8px; font-size: 11px; border: .5px solid var(--br); background: var(--s); color: var(--m); cursor: pointer; text-align: center; }
-    .type-btn.on { border-color: var(--bs); background: var(--gp); color: var(--g); }
-    .type-btn.red.on { border-color: rgba(224,85,85,.5); background: rgba(224,85,85,.1); color: var(--red); }
-
-    /* ---- PANEL ---- */
-    .sub-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
-    .sub-tab { padding: 6px 12px; border-radius: 8px; font-size: 11px; cursor: pointer; border: .5px solid var(--br); background: var(--d); color: var(--m); }
-    .sub-tab.active { background: var(--gp); color: var(--g); border-color: var(--bs); }
-    .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-    .bar-name { font-size: 11px; color: var(--t); width: 110px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .bar-bg { flex: 1; height: 14px; background: var(--s); border-radius: 7px; overflow: hidden; }
-    .bar-fill { height: 100%; background: var(--g); border-radius: 7px; }
-    .bar-val { font-size: 10px; color: var(--gl); width: 24px; text-align: right; flex-shrink: 0; }
-    .mini-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 14px; }
-    .mini-card { background: var(--d); border: .5px solid var(--br); border-radius: 9px; padding: 10px 6px; text-align: center; }
-    .mini-v { font-size: 20px; font-weight: 700; color: var(--gl); }
-    .mini-l { font-size: 9px; color: var(--m); margin-top: 2px; }
-
-    /* ---- LOADING ---- */
-    #loading { position: fixed; inset: 0; background: var(--b); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 200; }
-    .spinner { width: 40px; height: 40px; border: 3px solid var(--br); border-top-color: var(--g); border-radius: 50%; animation: spin .8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { color: var(--m); font-size: 12px; }
-
-    /* ---- ADMIN TABS ---- */
-    .admin-tabs { display: flex; background: var(--d); border-bottom: .5px solid var(--br); overflow-x: auto; }
-    .admin-tab { flex-shrink: 0; padding: 11px 14px; font-size: 11px; color: var(--m); cursor: pointer; border: none; background: transparent; border-bottom: 2px solid transparent; white-space: nowrap; }
-    .admin-tab.active { color: var(--g); border-bottom-color: var(--g); }
-
-    /* ---- UTILS ---- */
-    .sep { height: .5px; background: var(--br); margin: 14px 0; }
-    .text-muted { font-size: 11px; color: var(--m); }
-    .text-gold { color: var(--g); }
-    .del-btn { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(224,85,85,.1); color: var(--red); border: .5px solid rgba(224,85,85,.3); cursor: pointer; }
-    .edit-btn { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--s); color: var(--m); border: .5px solid var(--br); cursor: pointer; margin-right: 4px; }
-    .inv-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--blue-bg); border-radius: 8px; margin: 12px 0 6px; }
-    .inv-tag { font-size: 10px; font-weight: 700; color: var(--blue); letter-spacing: .08em; text-transform: uppercase; border: .5px solid var(--blue-border); padding: 2px 8px; border-radius: 10px; }
-    .empty-state { text-align: center; padding: 32px 16px; color: var(--m); font-size: 13px; }
+    :root{--b:#0f0f0f;--d:#1a1a1a;--s:#242424;--g:#c9a227;--gl:#e8c84a;--gp:#2a2310;--t:#f0ece0;--m:#888880;--br:rgba(201,162,39,0.2);--bs:rgba(201,162,39,0.5);--red:#e05555;--green:#7dc97d;--blue:#6ab0f5;--blue-bg:rgba(85,153,232,0.1);--blue-border:rgba(85,153,232,0.3)}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--b);color:var(--t);min-height:100vh}
+    #loading{position:fixed;inset:0;background:var(--b);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:200}
+    .spinner{width:40px;height:40px;border:3px solid var(--br);border-top-color:var(--g);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-text{color:var(--m);font-size:12px}
+    #auth-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+    .auth-logo{width:90px;height:90px;border-radius:50%;border:2px solid var(--g);overflow:hidden;margin-bottom:16px;background:var(--gp);display:flex;align-items:center;justify-content:center}
+    .auth-logo img{width:100%;height:100%;object-fit:cover}
+    .auth-club{font-size:18px;font-weight:700;letter-spacing:.04em;text-align:center}
+    .auth-lema{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--g);margin:4px 0 28px;text-align:center}
+    .auth-card{background:var(--d);border:.5px solid var(--bs);border-radius:16px;padding:24px;width:100%;max-width:360px}
+    .auth-title{font-size:13px;font-weight:700;color:var(--g);letter-spacing:.08em;text-transform:uppercase;margin-bottom:20px;text-align:center}
+    .field{margin-bottom:16px}
+    .field label{font-size:10px;color:var(--m);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px}
+    .field input{width:100%;background:var(--s);border:.5px solid var(--br);border-radius:8px;padding:11px 13px;color:var(--t);font-size:15px;outline:none}
+    .field input:focus{border-color:var(--bs)}
+    .btn-gold{width:100%;padding:13px;border-radius:10px;background:var(--g);color:var(--b);font-size:15px;font-weight:700;border:none;cursor:pointer}
+    .auth-error{font-size:12px;text-align:center;margin-top:10px;min-height:16px}
+    #app{display:none;flex-direction:column;min-height:100vh;max-width:480px;margin:0 auto}
+    .header{background:var(--b);border-bottom:.5px solid var(--br);padding:10px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+    .header-logo{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--g);overflow:hidden;flex-shrink:0;background:var(--gp);display:flex;align-items:center;justify-content:center}
+    .header-logo img{width:100%;height:100%;object-fit:cover}
+    .header-text{flex:1}
+    .header-club{font-size:11px;font-weight:700;color:var(--t);letter-spacing:.03em}
+    .header-lema{font-size:8px;color:var(--g);letter-spacing:.06em;text-transform:uppercase}
+    .cat-chip{background:var(--gp);border:.5px solid var(--bs);border-radius:20px;padding:4px 10px;color:var(--g);font-size:10px;cursor:pointer;display:none}
+    .logout-btn{background:transparent;border:.5px solid var(--br);border-radius:8px;color:var(--m);font-size:11px;padding:4px 8px;cursor:pointer}
+    .screen{display:none;flex:1;overflow-y:auto;padding:16px;padding-bottom:80px}
+    .screen.active{display:block}
+    .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;background:var(--d);border-top:.5px solid var(--br);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px 8px;cursor:pointer;border:none;background:transparent}
+    .tab-icon{font-size:20px}
+    .tab-label{font-size:9px;color:var(--m)}
+    .tab.active .tab-label{color:var(--g);font-weight:700}
+    .section-title{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--g);text-transform:uppercase;margin-bottom:10px;margin-top:18px}
+    .section-title:first-child{margin-top:0}
+    .card{background:var(--d);border:.5px solid var(--br);border-radius:12px;padding:13px 15px;margin-bottom:10px}
+    .card-title{font-size:14px;font-weight:600;color:var(--t)}
+    .card-sub{font-size:12px;color:var(--m);margin-top:3px}
+    .card-row{display:flex;justify-content:space-between;align-items:center}
+    .badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+    .badge-admin{background:var(--gp);color:var(--gl);border:.5px solid var(--bs)}
+    .badge-coach{background:var(--blue-bg);color:var(--blue);border:.5px solid var(--blue-border)}
+    .badge-colab{background:rgba(125,201,125,.12);color:var(--green);border:.5px solid rgba(125,201,125,.3)}
+    .nav-btn{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border:.5px solid var(--br);border-radius:12px;background:var(--d);margin-bottom:8px;cursor:pointer;font-size:14px;color:var(--t);width:100%;text-align:left}
+    .nav-btn:active{background:var(--s)}
+    .nav-arrow{color:var(--g);font-size:16px}
+    .mini-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px}
+    .mini-card{background:var(--d);border:.5px solid var(--br);border-radius:9px;padding:10px 6px;text-align:center}
+    .mini-v{font-size:20px;font-weight:700;color:var(--gl)}
+    .mini-l{font-size:9px;color:var(--m);margin-top:2px}
+    .btn-back{display:flex;align-items:center;gap:6px;background:transparent;border:.5px solid var(--br);border-radius:10px;color:var(--m);font-size:13px;padding:9px 13px;cursor:pointer;margin-bottom:14px;width:100%;text-align:left}
+    .btn-back:active{background:var(--s)}
+    .plist{background:var(--d);border:.5px solid var(--br);border-radius:12px;overflow:hidden;margin-bottom:10px}
+    .prow{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:.5px solid var(--br)}
+    .prow:last-child{border-bottom:none}
+    .pnum{width:30px;height:30px;border-radius:50%;background:var(--gp);border:.5px solid var(--bs);color:var(--g);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+    .pnum.inv{background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue)}
+    .pname{flex:1;font-size:13px;color:var(--t)}
+    .psub{font-size:10px;color:var(--m)}
+    .form-card{background:var(--d);border:.5px solid var(--bs);border-radius:12px;padding:16px;margin-bottom:12px}
+    .form-title{font-size:11px;color:var(--g);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .form-field{margin-bottom:10px}
+    .form-field label{font-size:10px;color:var(--m);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+    .form-field input,.form-field select{width:100%;background:var(--s);border:.5px solid var(--br);border-radius:8px;padding:9px 11px;color:var(--t);font-size:14px;outline:none;font-family:inherit}
+    .form-field input:focus,.form-field select:focus{border-color:var(--bs)}
+    .form-field select option{background:var(--s)}
+    .form-btns{display:flex;gap:8px;margin-top:4px}
+    .btn-sm-gold{padding:10px 16px;border-radius:8px;background:var(--g);color:var(--b);font-size:13px;font-weight:700;border:none;cursor:pointer;flex:1}
+    .btn-sm-out{padding:10px 16px;border-radius:8px;background:transparent;color:var(--g);border:.5px solid var(--bs);font-size:13px;cursor:pointer}
+    .scoreboard{background:var(--d);border:.5px solid var(--br);border-radius:14px;padding:18px 14px;margin-bottom:14px;text-align:center}
+    .score-teams{display:flex;align-items:center;justify-content:center;gap:8px}
+    .score-team{color:var(--m);font-size:11px;flex:1}
+    .score-team.home{text-align:right;color:var(--g)}
+    .score-nums{display:flex;align-items:center;gap:4px}
+    .score-n{color:var(--t);font-size:38px;font-weight:700;min-width:44px;text-align:center}
+    .score-sep{color:var(--m);font-size:28px}
+    .score-meta{color:var(--m);font-size:11px;margin-top:8px}
+    .score-period{color:var(--g);font-size:12px;font-weight:700;margin-top:2px}
+    .ev-panel{background:var(--d);border:.5px solid var(--bs);border-radius:12px;padding:13px;margin-bottom:10px;display:none}
+    .ev-player{font-size:12px;color:var(--g);font-weight:700;margin-bottom:10px}
+    .ev-btns{display:flex;gap:6px;flex-wrap:wrap}
+    .ev-btn{padding:7px 11px;border-radius:8px;font-size:12px;background:var(--s);border:.5px solid var(--br);cursor:pointer;color:var(--t)}
+    .ev-btn.gol{border-color:rgba(125,201,125,.4);color:var(--green)}
+    .ev-btn.ama{border-color:rgba(232,200,74,.4);color:var(--gl)}
+    .ev-btn.roj{border-color:rgba(224,85,85,.4);color:var(--red)}
+    .ev-btn.azu{border-color:rgba(106,176,245,.4);color:var(--blue)}
+    .ev-btn.exc{border-color:rgba(224,160,85,.4);color:#e0a055}
+    .ev-log{font-size:11px;color:var(--green);margin-top:8px;min-height:16px}
+    .att-row{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:.5px solid var(--br)}
+    .att-row:last-child{border-bottom:none}
+    .att-btns{display:flex;gap:6px;margin-left:auto}
+    .att-btn{padding:5px 12px;border-radius:7px;font-size:12px;border:.5px solid var(--br);background:var(--s);color:var(--m);cursor:pointer}
+    .att-btn.yes{background:rgba(125,201,125,.15);color:var(--green);border-color:rgba(125,201,125,.4)}
+    .att-btn.no{background:rgba(224,85,85,.1);color:var(--red);border-color:rgba(224,85,85,.3)}
+    .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .cal-nav button{background:transparent;border:.5px solid var(--br);border-radius:8px;color:var(--g);font-size:16px;padding:4px 12px;cursor:pointer}
+    .cal-month{font-size:13px;font-weight:700;color:var(--t);letter-spacing:.05em}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px}
+    .cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;border-radius:8px;color:var(--m);cursor:pointer;position:relative;gap:1px}
+    .cal-day.hdr{font-size:9px;color:var(--g);cursor:default}
+    .cal-day.today{outline:1.5px solid var(--g);color:var(--gl);font-weight:700}
+    .cal-day:not(.hdr):hover{background:var(--s)}
+    .cal-dots{display:flex;gap:2px}
+    .cal-dot{width:4px;height:4px;border-radius:50%}
+    .cal-dot.e{background:var(--blue)}
+    .cal-dot.p{background:var(--gl)}
+    .cal-dot.cancelled{background:#555}
+    .cal-dot.postponed{background:var(--red)}
+    .ev-item{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;background:var(--d);border-radius:10px;margin-bottom:8px;border-left:3px solid transparent;cursor:pointer}
+    .ev-item.ev-e{border-color:var(--blue)}
+    .ev-item.ev-p{border-color:var(--gl)}
+    .ev-item.ev-cancelled{border-color:#555;opacity:.7}
+    .ev-item.ev-postponed{border-color:var(--red)}
+    .ev-body{flex:1}
+    .ev-title{font-size:13px;font-weight:600;color:var(--t)}
+    .ev-meta{font-size:11px;color:var(--m);margin-top:2px}
+    .ev-tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;margin-top:4px}
+    .tag-e{background:var(--blue-bg);color:var(--blue)}
+    .tag-p{background:var(--gp);color:var(--gl)}
+    .tag-cancelled{background:rgba(100,100,100,.2);color:#888}
+    .tag-postponed{background:rgba(224,85,85,.1);color:var(--red)}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:flex-end;justify-content:center}
+    .modal-overlay.show{display:flex}
+    .modal{background:var(--d);border-radius:20px 20px 0 0;border:1px solid var(--bs);width:100%;max-width:480px;padding:20px;max-height:88vh;overflow-y:auto}
+    .modal-title{color:var(--g);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px}
+    .type-btns{display:flex;gap:6px;margin-bottom:12px}
+    .type-btn{flex:1;padding:10px 6px;border-radius:8px;font-size:12px;border:.5px solid var(--br);background:var(--s);color:var(--m);cursor:pointer;text-align:center}
+    .type-btn.on{border-color:var(--bs);background:var(--gp);color:var(--g)}
+    .sub-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+    .sub-tab{padding:6px 12px;border-radius:8px;font-size:11px;cursor:pointer;border:.5px solid var(--br);background:var(--d);color:var(--m)}
+    .sub-tab.active{background:var(--gp);color:var(--g);border-color:var(--bs)}
+    .sep{height:.5px;background:var(--br);margin:14px 0}
+    .del-btn{font-size:11px;padding:3px 8px;border-radius:6px;background:rgba(224,85,85,.1);color:var(--red);border:.5px solid rgba(224,85,85,.3);cursor:pointer}
+    .inv-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--blue-bg);border-radius:8px;margin:12px 0 6px}
+    .inv-tag{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;border:.5px solid var(--blue-border);padding:2px 8px;border-radius:10px}
+    .empty-state{text-align:center;padding:32px 16px;color:var(--m);font-size:13px}
+    .match-item{background:var(--d);border:.5px solid var(--br);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+    .match-item:active{background:var(--s)}
+    .comp-chip{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--gp);color:var(--gl);border:.5px solid var(--bs);display:inline-block;margin-top:4px}
+    .status-active{background:rgba(125,201,125,.15);color:var(--green);font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-block;margin-top:4px}
+    .text-muted{font-size:11px;color:var(--m)}
   </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spinner"></div>
-  <div class="loading-text">Cargando...</div>
-</div>
+<div id="loading"><div class="spinner"></div><div class="loading-text">Cargando...</div></div>
 
-<!-- AUTH -->
-<div id="auth-screen" style="display:none">
-  <div class="auth-logo">
-    <img src="logo.jpg" alt="C.D. Marta Mangué" onerror="this.style.display='none';this.parentElement.style.background='#2a2310';this.parentElement.innerHTML='<span style=\'color:#c9a227;font-size:18px;font-weight:bold;display:flex;align-items:center;justify-content:center;height:100%\'>MM</span>'"/>
-  </div>
+<div id="auth-screen">
+  <div class="auth-logo"><img src="logo.jpg" alt="MM" onerror="this.style.display='none'"/></div>
   <div class="auth-club">C.D. MARTA MANGUÉ</div>
   <div class="auth-lema">Donde los sueños se entrenan</div>
   <div class="auth-card">
     <div class="auth-title">Acceso</div>
-    <div class="field">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email"/>
-    </div>
-    <div class="field">
-      <label>Contraseña</label>
-      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
-    </div>
+    <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email"/></div>
+    <div class="field"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/></div>
     <button class="btn-gold" onclick="doLogin()">Entrar</button>
     <div class="auth-error" id="auth-error"></div>
-    <div style="text-align:center;margin-top:14px">
-      <span style="font-size:11px;color:var(--m);cursor:pointer" onclick="doReset()">¿Olvidaste tu contraseña?</span>
-    </div>
+    <div style="text-align:center;margin-top:14px"><span style="font-size:11px;color:var(--m);cursor:pointer" onclick="doReset()">¿Olvidaste tu contraseña?</span></div>
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <div class="header">
-    <div class="header-logo">
-      <img src="logo.jpg" alt="MM" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\'color:#c9a227;font-size:12px;font-weight:bold;display:flex;align-items:center;justify-content:center;height:100%\'>MM</span>'"/>
-    </div>
+    <div class="header-logo"><img src="logo.jpg" alt="MM" onerror="this.style.display='none'"/></div>
     <div class="header-text">
       <div class="header-club">C.D. MARTA MANGUÉ</div>
       <div class="header-lema">Donde los sueños se entrenan</div>
     </div>
-    <div class="header-right">
-      <div class="cat-chip" id="cat-chip" onclick="showCatModal()" style="display:none">Categoría ↓</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="cat-chip" id="cat-chip" onclick="showCatModal()">Categoría ↓</div>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
   </div>
-
-  <!-- INICIO -->
-  <div class="screen active" id="screen-inicio">
-    <div id="inicio-content"></div>
-  </div>
-
-  <!-- PARTIDO -->
-  <div class="screen" id="screen-partido">
-    <div id="partido-content"></div>
-  </div>
-
-  <!-- ENTRENO -->
-  <div class="screen" id="screen-entreno">
-    <div id="entreno-content"></div>
-  </div>
-
-  <!-- CALENDARIO -->
-  <div class="screen" id="screen-calendario">
-    <div id="calendario-content"></div>
-  </div>
-
-  <!-- PANEL -->
-  <div class="screen" id="screen-panel">
-    <div id="panel-content"></div>
-  </div>
-
+  <div class="screen active" id="screen-inicio"><div id="inicio-content"></div></div>
+  <div class="screen" id="screen-partido"><div id="partido-content"></div></div>
+  <div class="screen" id="screen-entreno"><div id="entreno-content"></div></div>
+  <div class="screen" id="screen-calendario"><div id="calendario-content"></div></div>
+  <div class="screen" id="screen-panel"><div id="panel-content"></div></div>
   <div class="tabbar" id="tabbar">
-    <button class="tab active" data-screen="inicio" onclick="goTo('inicio',this)">
-      <span class="tab-icon">🏠</span><span class="tab-label">Inicio</span>
-    </button>
-    <button class="tab" data-screen="partido" onclick="goTo('partido',this)">
-      <span class="tab-icon">🤾</span><span class="tab-label">Partido</span>
-    </button>
-    <button class="tab" data-screen="entreno" onclick="goTo('entreno',this)">
-      <span class="tab-icon">🏋️</span><span class="tab-label">Entreno</span>
-    </button>
-    <button class="tab" data-screen="calendario" onclick="goTo('calendario',this)">
-      <span class="tab-icon">📅</span><span class="tab-label">Calendario</span>
-    </button>
-    <button class="tab" data-screen="panel" onclick="goTo('panel',this)">
-      <span class="tab-icon">📊</span><span class="tab-label">Panel</span>
-    </button>
+    <button class="tab active" data-screen="inicio" onclick="goTo('inicio',this)"><span class="tab-icon">🏠</span><span class="tab-label">Inicio</span></button>
+    <button class="tab" data-screen="partido" onclick="goTo('partido',this)"><span class="tab-icon">🤾</span><span class="tab-label">Partido</span></button>
+    <button class="tab" data-screen="entreno" onclick="goTo('entreno',this)"><span class="tab-icon">🏋️</span><span class="tab-label">Entreno</span></button>
+    <button class="tab" data-screen="calendario" onclick="goTo('calendario',this)"><span class="tab-icon">📅</span><span class="tab-label">Calendario</span></button>
+    <button class="tab" data-screen="panel" onclick="goTo('panel',this)"><span class="tab-icon">📊</span><span class="tab-label">Panel</span></button>
   </div>
 </div>
 
-<!-- MODAL CALENDARIO -->
-<div class="modal-overlay" id="cal-modal" onclick="closeModal(event)">
+<!-- MODAL NUEVO EVENTO -->
+<div class="modal-overlay" id="cal-modal" onclick="closeModalClick(event)">
   <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-title">Añadir evento — <span id="modal-day-label"></span></div>
+    <div class="modal-title">Nuevo evento — <span id="modal-day-label"></span></div>
     <div style="margin-bottom:12px">
       <div style="font-size:10px;color:var(--m);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Tipo</div>
       <div class="type-btns">
-        <div class="type-btn on" onclick="selType(this,'e')">🏋️ Entreno</div>
-        <div class="type-btn" onclick="selType(this,'p')">🤾 Partido</div>
-        <div class="type-btn red" onclick="selType(this,'c')">✗ Cancelado</div>
-        <div class="type-btn red" onclick="selType(this,'s')">⏸ Aplazado</div>
+        <div class="type-btn on" id="tbtn-e" onclick="selCalType('e')">🏋️ Entreno</div>
+        <div class="type-btn" id="tbtn-p" onclick="selCalType('p')">🤾 Partido</div>
       </div>
     </div>
-    <div class="form-field">
-      <label>Hora</label>
-      <input type="time" id="modal-time" value="18:30"/>
-    </div>
-    <div class="form-field">
-      <label>Lugar</label>
-      <input type="text" id="modal-lugar" placeholder="Pabellón Ingenio"/>
-    </div>
-    <div class="form-field" id="rival-field" style="display:none">
-      <label>Rival</label>
-      <input type="text" id="modal-rival" placeholder="Nombre del equipo rival"/>
-    </div>
-    <div class="form-field" id="motivo-field" style="display:none">
-      <label>Motivo</label>
-      <input type="text" id="modal-motivo" placeholder="Ej: mal tiempo, pista ocupada..."/>
-    </div>
+    <div class="form-field"><label>Hora</label><input type="time" id="modal-time" value="18:30"/></div>
+    <div class="form-field"><label>Lugar</label><input type="text" id="modal-lugar" placeholder="Pabellón Ingenio"/></div>
+    <div class="form-field" id="rival-field" style="display:none"><label>Rival</label><input type="text" id="modal-rival" placeholder="Nombre del equipo rival"/></div>
+    <div class="form-field" id="comp-field" style="display:none"><label>Competición</label><select id="modal-comp"><option value="Liga">Liga</option><option value="Copa Apertura">Copa Apertura</option><option value="Copa Deporte&amp;Salud">Copa Deporte&amp;Salud</option><option value="Amistoso">Amistoso</option></select></div>
+    <div class="form-field" id="train-type-field"><label>Tipo de sesión</label><select id="modal-train-type"><option>Normal</option><option>Físico</option><option>Técnico-táctico</option><option>Preparación partido</option></select></div>
     <div class="form-btns" style="margin-top:8px">
       <button class="btn-sm-gold" onclick="saveCalEvent()">Guardar</button>
-      <button class="btn-sm-out" onclick="document.getElementById('cal-modal').classList.remove('show')">Cancelar</button>
+      <button class="btn-sm-out" onclick="hideModal('cal-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE EVENTO -->
+<div class="modal-overlay" id="ev-detail-modal" onclick="closeModalClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="ev-detail-title">Evento</div>
+    <div id="ev-detail-body"></div>
+    <div id="ev-status-actions"></div>
+    <button class="btn-sm-out" style="width:100%;margin-top:10px" onclick="hideModal('ev-detail-modal')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL ESTADO EVENTO -->
+<div class="modal-overlay" id="ev-status-modal" onclick="closeModalClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="ev-status-title">Cambiar estado</div>
+    <div class="form-field"><label>Motivo</label><input type="text" id="ev-status-motivo" placeholder="Ej: mal tiempo, pista ocupada..."/></div>
+    <div class="form-field" id="new-date-field" style="display:none"><label>Nueva fecha (si ya se sabe)</label><input type="date" id="ev-new-date"/></div>
+    <div class="form-btns">
+      <button class="btn-sm-gold" id="ev-status-save-btn">Confirmar</button>
+      <button class="btn-sm-out" onclick="hideModal('ev-status-modal')">Cancelar</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL CATEGORÍA -->
-<div class="modal-overlay" id="cat-modal" onclick="closeModal(event)">
+<div class="modal-overlay" id="cat-modal" onclick="closeModalClick(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-title">Selecciona categoría</div>
     <div id="cat-list"></div>
   </div>
 </div>
 
+<!-- MODAL ACTA -->
+<div class="modal-overlay" id="acta-modal" onclick="closeModalClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Acta del partido</div>
+    <div id="acta-content"></div>
+    <button class="btn-sm-out" style="width:100%;margin-top:12px" onclick="hideModal('acta-modal')">Cerrar</button>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc,
-         query, where, orderBy, deleteDoc, updateDoc, serverTimestamp }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, query, where, deleteDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAd8tnUNDa8TDv7EutRL_pn9rY58TrZenU",
-  authDomain: "cd-marta-mangue.firebaseapp.com",
-  projectId: "cd-marta-mangue",
-  storageBucket: "cd-marta-mangue.firebasestorage.app",
-  messagingSenderId: "525494051714",
-  appId: "1:525494051714:web:771998f543c6ef7b33259b"
-};
+const firebaseConfig = { apiKey:"AIzaSyAd8tnUNDa8TDv7EutRL_pn9rY58TrZenU", authDomain:"cd-marta-mangue.firebaseapp.com", projectId:"cd-marta-mangue", storageBucket:"cd-marta-mangue.firebasestorage.app", messagingSenderId:"525494051714", appId:"1:525494051714:web:771998f543c6ef7b33259b" };
+const fireApp = initializeApp(firebaseConfig);
+const auth = getAuth(fireApp);
+const db = getFirestore(fireApp);
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+let currentUser=null, userProfile=null, currentCat=null;
+let calEvents={}, calMonth=new Date().getMonth(), calYear=new Date().getFullYear();
+let calType='e', selDay=null, selEventId=null, selEventData=null;
+let matchSelPlayer=null, matchScoreHome=0, matchEvents=[], activeMatchId=null;
 
-// ===================== STATE =====================
-let currentUser = null;
-let userProfile = null;
-let currentCat = null;
-let calEvents = {};
-let calMonth = new Date().getMonth();
-let calYear = new Date().getFullYear();
-let calType = 'e';
-let selDay = null;
-let matchSelPlayer = null;
-let matchPlayers = [];
-let matchScoreHome = 0;
-let attendancePlayers = [];
+const CATS=['Benjamín (Mixto)','Alevín Femenino','Alevín Masculino','Infantil Femenino','Infantil Masculino','Cadete Femenino','Cadete Masculino','Juvenil Femenino','Juvenil Masculino'];
+const INV_MAP={'Alevín Femenino':'Benjamín (Mixto)','Alevín Masculino':'Benjamín (Mixto)','Infantil Femenino':'Alevín Femenino','Infantil Masculino':'Alevín Masculino','Cadete Femenino':'Infantil Femenino','Cadete Masculino':'Infantil Masculino','Juvenil Femenino':'Cadete Femenino','Juvenil Masculino':'Cadete Masculino'};
+const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const ROLE_LABELS={admin:'Administrador/a',coach:'Entrenador/a',colab:'Colaborador/a'};
+const ROLE_BADGES={admin:'badge-admin',coach:'badge-coach',colab:'badge-colab'};
 
-const CATS = [
-  'Benjamín (Mixto)',
-  'Alevín Femenino','Alevín Masculino',
-  'Infantil Femenino','Infantil Masculino',
-  'Cadete Femenino','Cadete Masculino',
-  'Juvenil Femenino','Juvenil Masculino'
-];
-
-const INV_MAP = {
-  'Alevín Femenino':'Benjamín (Mixto)',
-  'Alevín Masculino':'Benjamín (Mixto)',
-  'Infantil Femenino':'Alevín Femenino',
-  'Infantil Masculino':'Alevín Masculino',
-  'Cadete Femenino':'Infantil Femenino',
-  'Cadete Masculino':'Infantil Masculino',
-  'Juvenil Femenino':'Cadete Femenino',
-  'Juvenil Masculino':'Cadete Masculino',
-};
-
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-
-// ===================== AUTH =====================
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, async user=>{
   hide('loading');
-  if (user) {
-    currentUser = user;
-    await loadUserProfile(user.uid);
-  } else {
-    show('auth-screen');
-  }
+  if(user){currentUser=user; await loadProfile(user.uid);}
+  else showFlex('auth-screen');
 });
 
-async function loadUserProfile(uid) {
-  const snap = await getDoc(doc(db,'users',uid));
-  if (snap.exists()) {
-    userProfile = snap.data();
-    currentCat = userProfile.role === 'admin' ? CATS[0] : userProfile.category;
+async function loadProfile(uid){
+  const snap=await getDoc(doc(db,'users',uid));
+  if(snap.exists()){
+    userProfile=snap.data();
+    currentCat=userProfile.role==='admin'?CATS[0]:userProfile.category;
     setupApp();
-  } else {
-    show('auth-screen');
-    document.getElementById('auth-error').textContent = 'Usuario no encontrado. Contacta con las administradoras.';
-  }
+  } else { showFlex('auth-screen'); document.getElementById('auth-error').textContent='Usuario no encontrado. Contacta con las administradoras.'; }
 }
 
-function setupApp() {
-  hide('auth-screen');
-  show('app');
-  const chip = document.getElementById('cat-chip');
-  if (userProfile.role === 'admin') {
-    chip.style.display = 'block';
-    chip.textContent = currentCat + ' ↓';
+function setupApp(){
+  hide('auth-screen'); showFlex('app');
+  if(userProfile.role==='admin'){const c=document.getElementById('cat-chip');c.style.display='block';c.textContent=currentCat+' ↓';}
+  if(userProfile.role==='colab'){
+    ['entreno','calendario','panel'].forEach(s=>{ const t=document.querySelector('[data-screen='+s+']'); if(t) t.style.display='none'; });
   }
   renderInicio();
 }
 
-window.doLogin = async function() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  const err = document.getElementById('auth-error');
-  err.textContent = '';
-  if (!email || !pass) { err.textContent = 'Introduce email y contraseña.'; return; }
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch(e) {
-    err.textContent = 'Email o contraseña incorrectos.';
-  }
+window.doLogin=async function(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('auth-error');
+  err.textContent=''; err.style.color='var(--red)';
+  if(!email||!pass){err.textContent='Introduce email y contraseña.';return;}
+  try{await signInWithEmailAndPassword(auth,email,pass);}
+  catch(e){err.textContent='Email o contraseña incorrectos.';}
+};
+window.doLogout=async function(){await signOut(auth);hide('app');showFlex('auth-screen');document.getElementById('auth-error').textContent='';};
+window.doReset=async function(){
+  const email=document.getElementById('login-email').value.trim();
+  const err=document.getElementById('auth-error');
+  if(!email){err.textContent='Introduce tu email primero.';return;}
+  await sendPasswordResetEmail(auth,email);
+  err.style.color='var(--green)'; err.textContent='Email enviado. Revisa tu bandeja de entrada.';
 };
 
-window.doLogout = async function() {
-  await signOut(auth);
-  hide('app');
-  show('auth-screen');
-  document.getElementById('auth-error').textContent = '';
-};
-
-window.doReset = async function() {
-  const email = document.getElementById('login-email').value.trim();
-  if (!email) { document.getElementById('auth-error').textContent = 'Introduce tu email primero.'; return; }
-  await sendPasswordResetEmail(auth, email);
-  document.getElementById('auth-error').style.color = 'var(--green)';
-  document.getElementById('auth-error').textContent = 'Email enviado. Revisa tu bandeja de entrada.';
-};
-
-// ===================== NAVIGATION =====================
-window.goTo = function(screen, tab) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+window.goTo=function(screen,tab){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('screen-'+screen).classList.add('active');
-  if (tab) tab.classList.add('active');
-  const renders = {
-    inicio: renderInicio, partido: renderPartido,
-    entreno: renderEntreno, calendario: renderCalendario,
-    panel: renderPanel
-  };
-  if (renders[screen]) renders[screen]();
+  if(tab) tab.classList.add('active');
+  const r={inicio:renderInicio,partido:renderPartido,entreno:renderEntreno,calendario:renderCalendario,panel:renderPanel};
+  if(r[screen]) r[screen]();
 };
 
-// ===================== INICIO =====================
-async function renderInicio() {
-  const el = document.getElementById('inicio-content');
-  const isAdmin = userProfile.role === 'admin';
-  el.innerHTML = `
-    <div class="section-title">Bienvenida</div>
+async function renderInicio(){
+  const el=document.getElementById('inicio-content');
+  const isAdmin=userProfile.role==='admin', isColab=userProfile.role==='colab';
+  el.innerHTML=`
+    <div class="section-title">Bienvenido/a</div>
     <div class="card">
       <div class="card-row">
-        <div>
-          <div class="card-title">${userProfile.name}</div>
-          <div class="card-sub">${isAdmin ? 'Administradora · Acceso total' : 'Entrenadora · ' + userProfile.category}</div>
-        </div>
-        <span class="badge ${isAdmin ? 'badge-admin':'badge-coach'}">${isAdmin ? 'Admin' : userProfile.category.split(' ')[0]}</span>
+        <div><div class="card-title">${userProfile.name}</div><div class="card-sub">${ROLE_LABELS[userProfile.role]}${!isAdmin&&userProfile.category?' · '+userProfile.category:''}</div></div>
+        <span class="badge ${ROLE_BADGES[userProfile.role]}">${ROLE_LABELS[userProfile.role]}</span>
       </div>
     </div>
-    <div class="section-title">Acceso rápido</div>
-    <button class="nav-btn" onclick="goTo('partido',document.querySelector('[data-screen=partido]'))">
-      <span><span style="font-size:18px;margin-right:10px">🤾</span>Registrar partido</span>
-      <span class="nav-arrow">›</span>
-    </button>
-    <button class="nav-btn" onclick="goTo('entreno',document.querySelector('[data-screen=entreno]'))">
-      <span><span style="font-size:18px;margin-right:10px">🏋️</span>Registrar entreno</span>
-      <span class="nav-arrow">›</span>
-    </button>
-    <button class="nav-btn" onclick="goTo('calendario',document.querySelector('[data-screen=calendario]'))">
-      <span><span style="font-size:18px;margin-right:10px">📅</span>Calendario</span>
-      <span class="nav-arrow">›</span>
-    </button>
-    <button class="nav-btn" onclick="goTo('panel',document.querySelector('[data-screen=panel]'))">
-      <span><span style="font-size:18px;margin-right:10px">📊</span>Panel del club</span>
-      <span class="nav-arrow">›</span>
-    </button>
-    ${isAdmin ? `
-    <div class="sep"></div>
-    <div class="section-title">Administración</div>
-    <button class="nav-btn" onclick="renderAdminPlantilla()">
-      <span><span style="font-size:18px;margin-right:10px">👥</span>Gestionar plantillas</span>
-      <span class="nav-arrow">›</span>
-    </button>
-    <button class="nav-btn" onclick="renderAdminUsuarios()">
-      <span><span style="font-size:18px;margin-right:10px">👤</span>Gestionar usuarios</span>
-      <span class="nav-arrow">›</span>
-    </button>` : ''}
-  `;
+    ${isColab?`
+      <div class="section-title">Partidos activos — ${userProfile.category}</div>
+      <div id="colab-matches"><div class="empty-state">Cargando...</div></div>
+    `:`
+      <div class="section-title">Acceso rápido</div>
+      <button class="nav-btn" onclick="goTo('partido',document.querySelector('[data-screen=partido]'))"><span><span style="font-size:18px;margin-right:10px">🤾</span>Registrar partido</span><span class="nav-arrow">›</span></button>
+      <button class="nav-btn" onclick="goTo('entreno',document.querySelector('[data-screen=entreno]'))"><span><span style="font-size:18px;margin-right:10px">🏋️</span>Registrar entreno</span><span class="nav-arrow">›</span></button>
+      <button class="nav-btn" onclick="goTo('calendario',document.querySelector('[data-screen=calendario]'))"><span><span style="font-size:18px;margin-right:10px">📅</span>Calendario</span><span class="nav-arrow">›</span></button>
+      <button class="nav-btn" onclick="goTo('panel',document.querySelector('[data-screen=panel]'))"><span><span style="font-size:18px;margin-right:10px">📊</span>Panel del club</span><span class="nav-arrow">›</span></button>
+      ${isAdmin?`
+        <div class="sep"></div>
+        <div class="section-title">Administración</div>
+        <button class="nav-btn" onclick="renderAdminPlantilla()"><span><span style="font-size:18px;margin-right:10px">👥</span>Gestionar plantillas</span><span class="nav-arrow">›</span></button>
+        <button class="nav-btn" onclick="renderAdminUsuarios()"><span><span style="font-size:18px;margin-right:10px">👤</span>Gestionar usuarios</span><span class="nav-arrow">›</span></button>
+        <button class="nav-btn" onclick="renderAdminCompeticiones()"><span><span style="font-size:18px;margin-right:10px">🏆</span>Gestionar competiciones</span><span class="nav-arrow">›</span></button>
+      `:''}
+    `}`;
+  if(isColab) loadColabMatches();
 }
 
-// ===================== PLANTILLA =====================
-async function getPlayers(cat) {
-  const q = query(collection(db,'players'), where('category','==',cat), where('active','==',true));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({id:d.id,...d.data()})).sort((a,b)=>a.dorsal-b.dorsal);
+async function loadColabMatches(){
+  const q=query(collection(db,'matches'),where('category','==',userProfile.category),where('status','==','active'));
+  const snap=await getDocs(q);
+  const el=document.getElementById('colab-matches');
+  if(!el) return;
+  if(snap.empty){el.innerHTML='<div class="empty-state">No hay partidos activos en tu categoría ahora mismo.</div>';return;}
+  el.innerHTML=snap.docs.map(d=>{const m={id:d.id,...d.data()};return `<div class="match-item" onclick="loadActiveMatch('${m.id}');goTo('partido',document.querySelector('[data-screen=partido]'))"><div class="card-title">vs. ${m.rival||'—'}</div><div class="card-sub">${m.competition||''} · ${m.location||''}</div><span class="status-active">En curso</span></div>`;}).join('');
 }
 
-async function getInvitadas(cat) {
-  const invCat = INV_MAP[cat];
-  if (!invCat) return [];
-  return await getPlayers(invCat);
+async function getPlayers(cat){
+  const q=query(collection(db,'players'),where('category','==',cat),where('active','==',true));
+  const snap=await getDocs(q);
+  return snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.dorsal-b.dorsal);
+}
+async function getInvitadas(cat){const inv=INV_MAP[cat];if(!inv)return[];return await getPlayers(inv);}
+
+async function getCompetitions(){
+  const snap=await getDocs(collection(db,'competitions'));
+  const comps=snap.docs.map(d=>({id:d.id,...d.data()}));
+  if(!comps.length) return [{name:'Amistoso'}];
+  return [...comps,{name:'Amistoso'}];
 }
 
-// ===================== PARTIDO =====================
-async function renderPartido() {
-  const el = document.getElementById('partido-content');
-  el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--m)"><div class="spinner" style="margin:0 auto 12px"></div>Cargando plantilla...</div>`;
-  const cat = currentCat;
-  const players = await getPlayers(cat);
-  const invs = await getInvitadas(cat);
-  matchPlayers = players;
-  matchScoreHome = 0;
+async function renderPartido(){
+  const el=document.getElementById('partido-content');
+  if(activeMatchId){await loadActiveMatch(activeMatchId);return;}
+  if(userProfile.role==='colab'){el.innerHTML='<div class="empty-state">El/la entrenador/a debe crear el partido primero.</div>';return;}
+  const comps=await getCompetitions();
+  el.innerHTML=`
+    <div class="section-title">Nuevo partido — ${currentCat}</div>
+    <div class="form-card">
+      <div class="form-title">Datos del partido</div>
+      <div class="form-field"><label>Rival</label><input type="text" id="match-rival" placeholder="Nombre del equipo rival"/></div>
+      <div class="form-row">
+        <div class="form-field"><label>Fecha</label><input type="date" id="match-date" value="${new Date().toISOString().split('T')[0]}"/></div>
+        <div class="form-field"><label>Hora</label><input type="time" id="match-time" value="11:00"/></div>
+      </div>
+      <div class="form-field"><label>Lugar</label><input type="text" id="match-location" placeholder="Pabellón Ingenio"/></div>
+      <div class="form-field"><label>Competición</label><select id="match-comp">${comps.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
+      <button class="btn-sm-gold" style="width:100%;margin-top:4px" onclick="startMatch()">Iniciar partido</button>
+    </div>
+    <div class="section-title">Historial de partidos</div>
+    <div id="match-history"><div class="empty-state">Cargando...</div></div>`;
+  loadMatchHistory();
+}
 
-  el.innerHTML = `
+async function loadMatchHistory(){
+  const el=document.getElementById('match-history');if(!el)return;
+  const q=query(collection(db,'matches'),where('category','==',currentCat));
+  const snap=await getDocs(q);
+  if(snap.empty){el.innerHTML='<div class="empty-state">Aún no hay partidos registrados.</div>';return;}
+  const matches=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  el.innerHTML=matches.map(m=>`
+    <div class="match-item" onclick="showMatchActa('${m.id}')">
+      <div class="card-row"><div class="card-title">vs. ${m.rival||'—'}</div><div style="font-size:14px;font-weight:700;color:var(--gl)">${m.scoreHome??0} – ${m.scoreAway??0}</div></div>
+      <div class="card-sub">${new Date(m.date).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})} · ${m.location||''}</div>
+      ${m.competition?`<span class="comp-chip">${m.competition}</span>`:''}
+      ${m.status==='active'?'<span class="status-active" style="margin-left:6px">En curso</span>':''}
+    </div>`).join('');
+}
+
+window.startMatch=async function(){
+  const rival=document.getElementById('match-rival').value.trim();
+  if(!rival){alert('Introduce el nombre del rival.');return;}
+  const ref=await addDoc(collection(db,'matches'),{
+    category:currentCat, rival, date:document.getElementById('match-date').value,
+    time:document.getElementById('match-time').value, location:document.getElementById('match-location').value.trim(),
+    competition:document.getElementById('match-comp').value, scoreHome:0, scoreAway:0,
+    status:'active', events:[], createdBy:currentUser.uid, createdAt:serverTimestamp()
+  });
+  activeMatchId=ref.id; matchScoreHome=0; matchEvents=[];
+  await loadActiveMatch(ref.id);
+};
+
+window.loadActiveMatch=async function(id){
+  const el=document.getElementById('partido-content');
+  const snap=await getDoc(doc(db,'matches',id));
+  if(!snap.exists()){el.innerHTML='<div class="empty-state">Partido no encontrado.</div>';return;}
+  const m={id:snap.id,...snap.data()};
+  activeMatchId=id; matchScoreHome=m.scoreHome||0; matchEvents=m.events||[];
+  const players=await getPlayers(m.category), invs=await getInvitadas(m.category);
+  el.innerHTML=`
     <div class="scoreboard">
       <div class="score-teams">
         <div class="score-team home">Las Panteras</div>
-        <div class="score-nums">
-          <div class="score-n" id="score-home">0</div>
-          <div class="score-sep">:</div>
-          <div class="score-n">0</div>
-        </div>
-        <div class="score-team">Rival</div>
+        <div class="score-nums"><div class="score-n" id="score-home">${matchScoreHome}</div><div class="score-sep">:</div><div class="score-n">${m.scoreAway||0}</div></div>
+        <div class="score-team">${m.rival}</div>
       </div>
-      <div class="score-meta" id="match-cat">${cat}</div>
-      <div class="score-period">Partido en curso</div>
+      <div class="score-meta">${m.competition||''} · ${m.location||''}</div>
+      <div class="score-period">${new Date(m.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}</div>
     </div>
     <div class="ev-panel" id="ev-panel">
-      <div class="ev-player" id="ev-player-name">Selecciona una jugadora</div>
+      <div class="ev-player" id="ev-player-name">Selecciona una jugadora/jugador</div>
       <div class="ev-btns">
-        <button class="ev-btn gol" onclick="regEvent('⚽ Gol')">⚽ Gol</button>
-        <button class="ev-btn ama" onclick="regEvent('🟨 Amarilla')">🟨 Amarilla</button>
-        <button class="ev-btn roj" onclick="regEvent('🟥 Roja')">🟥 Roja</button>
-        <button class="ev-btn azu" onclick="regEvent('🟦 Azul')">🟦 Azul</button>
-        <button class="ev-btn exc" onclick="regEvent('⏱ 2min')">⏱ 2min</button>
+        <button class="ev-btn gol" onclick="regEvent('gol','⚽ Gol')">⚽ Gol</button>
+        <button class="ev-btn ama" onclick="regEvent('amarilla','🟨 Amarilla')">🟨 Amarilla</button>
+        <button class="ev-btn roj" onclick="regEvent('roja','🟥 Roja')">🟥 Roja</button>
+        <button class="ev-btn azu" onclick="regEvent('azul','🟦 Azul')">🟦 Azul</button>
+        <button class="ev-btn exc" onclick="regEvent('exclusion','⏱ 2min')">⏱ 2min</button>
       </div>
       <div class="ev-log" id="ev-log"></div>
     </div>
-    <div class="section-title">Plantilla — ${cat}</div>
+    <div class="section-title">Jugadores/as — ${m.category}</div>
     <div class="plist" id="match-plist">
-      ${players.length === 0
-        ? '<div class="empty-state">No hay jugadoras en esta categoría.<br>Un administrador debe añadirlas primero.</div>'
-        : players.map(p => `
-          <div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})">
-            <div class="pnum">${p.dorsal}</div>
-            <div class="pname">${p.name} ${p.surname||''}</div>
-          </div>`).join('')
-      }
+      ${players.length===0?'<div class="empty-state">Sin jugadores/as en esta categoría.</div>':players.map(p=>`<div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})"><div class="pnum">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}</div></div>`).join('')}
     </div>
-    ${invs.length > 0 ? `
-      <div class="inv-header">
-        <span class="inv-tag">INVITAD@S</span>
-        <span style="font-size:11px;color:var(--m)">De ${INV_MAP[cat]}</span>
+    ${invs.length>0?`<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De ${INV_MAP[m.category]}</span></div><div class="plist">${invs.map(p=>`<div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})"><div class="pnum inv">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}<br><span class="psub">INVITAD@</span></div></div>`).join('')}</div>`:''}
+    ${matchEvents.length>0?`<div class="section-title">Eventos registrados (${matchEvents.length})</div><div class="plist">${matchEvents.map(e=>`<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">${e.label}</div><div style="font-size:11px;color:var(--m)">${e.playerName}</div></div>`).join('')}</div>`:''}
+    <button class="btn-gold" style="width:100%;margin-top:8px" onclick="finishMatch()">Finalizar y guardar partido</button>`;
+};
+
+window.selMatchPlayer=function(row,id,name,dorsal){
+  document.querySelectorAll('#match-plist .prow').forEach(r=>r.style.background='');
+  row.style.background='rgba(201,162,39,0.1)';
+  matchSelPlayer={id,name,dorsal};
+  document.getElementById('ev-player-name').textContent=name+' — elige evento:';
+  document.getElementById('ev-panel').style.display='block';
+  document.getElementById('ev-log').textContent='';
+};
+
+window.regEvent=async function(type,label){
+  if(!matchSelPlayer)return;
+  if(type==='gol'){matchScoreHome++;document.getElementById('score-home').textContent=matchScoreHome;}
+  const ev={type,label,playerId:matchSelPlayer.id,playerName:matchSelPlayer.name,ts:new Date().toISOString()};
+  matchEvents.push(ev);
+  await updateDoc(doc(db,'matches',activeMatchId),{scoreHome:matchScoreHome,events:matchEvents});
+  document.getElementById('ev-log').textContent='✓ '+label+' registrado para '+matchSelPlayer.name;
+};
+
+window.finishMatch=async function(){
+  if(!confirm('¿Finalizar y guardar el partido?'))return;
+  await updateDoc(doc(db,'matches',activeMatchId),{status:'finished'});
+  const id=activeMatchId; activeMatchId=null; matchScoreHome=0; matchEvents=[];
+  showMatchActa(id);
+};
+
+window.showMatchActa=async function(id){
+  const snap=await getDoc(doc(db,'matches',id));
+  if(!snap.exists())return;
+  const m={id:snap.id,...snap.data()};
+  const evHtml=(m.events||[]).length===0?'<div class="text-muted" style="text-align:center;padding:12px">Sin eventos registrados</div>':(m.events||[]).map(e=>`<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">${e.label}</div><div style="font-size:11px;color:var(--m)">${e.playerName}</div></div>`).join('');
+  document.getElementById('acta-content').innerHTML=`
+    <div class="card" style="border-color:var(--bs);text-align:center;margin-bottom:14px">
+      <div style="font-size:24px;font-weight:700;color:var(--gl)">${m.scoreHome??0} – ${m.scoreAway??0}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--t);margin-top:4px">C.D. Marta Mangué vs. ${m.rival}</div>
+      <div style="font-size:11px;color:var(--m);margin-top:3px">${new Date(m.date).toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+      ${m.competition?`<span class="comp-chip">${m.competition}</span>`:''}
+    </div>
+    <div class="section-title">Eventos del partido</div>
+    <div class="plist">${evHtml}</div>`;
+  showModal('acta-modal');
+};
+
+async function renderEntreno(){
+  const el=document.getElementById('entreno-content');
+  el.innerHTML=`
+    <div class="section-title">Nuevo entreno — ${currentCat}</div>
+    <div class="form-card">
+      <div class="form-title">Datos de la sesión</div>
+      <div class="form-row">
+        <div class="form-field"><label>Fecha</label><input type="date" id="train-date" value="${new Date().toISOString().split('T')[0]}"/></div>
+        <div class="form-field"><label>Hora</label><input type="time" id="train-time" value="18:30"/></div>
       </div>
-      <div class="plist">
-        ${invs.map(p => `
-          <div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})">
-            <div class="pnum inv">${p.dorsal}</div>
-            <div class="pname">${p.name} ${p.surname||''}<br><span class="psub">INVITAD@</span></div>
-          </div>`).join('')}
-      </div>` : ''}
-    <button class="btn-gold" style="width:100%;margin-top:8px" onclick="saveMatch()">Finalizar y guardar partido</button>
-  `;
-}
-
-window.selMatchPlayer = function(row, id, name, dorsal) {
-  document.querySelectorAll('#match-plist .prow').forEach(r => r.style.background='');
-  row.style.background = 'rgba(201,162,39,0.1)';
-  matchSelPlayer = {id, name, dorsal};
-  document.getElementById('ev-player-name').textContent = name + ' — elige evento:';
-  document.getElementById('ev-panel').style.display = 'block';
-  document.getElementById('ev-log').textContent = '';
-};
-
-window.regEvent = function(ev) {
-  if (!matchSelPlayer) return;
-  if (ev.includes('Gol')) {
-    matchScoreHome++;
-    document.getElementById('score-home').textContent = matchScoreHome;
-  }
-  document.getElementById('ev-log').textContent = '✓ ' + ev + ' registrado para ' + matchSelPlayer.name;
-};
-
-window.saveMatch = async function() {
-  if (!confirm('¿Finalizar y guardar el partido?')) return;
-  await addDoc(collection(db,'matches'), {
-    category: currentCat, date: new Date().toISOString(),
-    scoreHome: matchScoreHome, createdBy: currentUser.uid,
-    createdAt: serverTimestamp()
-  });
-  alert('Partido guardado correctamente.');
-  matchScoreHome = 0;
-  document.getElementById('score-home').textContent = '0';
-};
-
-// ===================== ENTRENO =====================
-async function renderEntreno() {
-  const el = document.getElementById('entreno-content');
-  el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--m)"><div class="spinner" style="margin:0 auto 12px"></div>Cargando plantilla...</div>`;
-  const cat = currentCat;
-  const players = await getPlayers(cat);
-  const invs = await getInvitadas(cat);
-  attendancePlayers = [...players, ...invs.map(p=>({...p,isInv:true}))];
-
-  const today = new Date();
-  el.innerHTML = `
-    <div class="card" style="text-align:center;border-color:var(--bs)">
-      <div style="color:var(--g);font-size:13px;font-weight:700">${cat}</div>
-      <div style="color:var(--m);font-size:12px;margin-top:3px">${today.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</div>
+      <div class="form-field"><label>Tipo de sesión</label><select id="train-type"><option>Normal</option><option>Físico</option><option>Técnico-táctico</option><option>Preparación partido</option></select></div>
+      <button class="btn-sm-gold" style="width:100%;margin-top:4px" onclick="startEntreno()">Iniciar registro de asistencia</button>
     </div>
-    <div style="display:flex;gap:12px;margin-bottom:12px;font-size:11px;color:var(--m)">
-      <span style="color:var(--green)">● Asiste</span>
-      <span style="color:var(--red)">● No asiste</span>
-      <span>○ Sin marcar</span>
-    </div>
-    <div class="section-title">Plantilla — ${cat}</div>
-    <div class="plist" id="att-list">
-      ${players.length === 0
-        ? '<div class="empty-state">No hay jugadoras en esta categoría.</div>'
-        : players.map(p => `
-          <div class="att-row" data-id="${p.id}">
-            <div class="pnum">${p.dorsal}</div>
-            <div style="flex:1;font-size:13px;color:var(--t)">${p.name} ${p.surname||''}</div>
-            <div class="att-btns">
-              <button class="att-btn" onclick="toggleAtt(this,'yes')">✓</button>
-              <button class="att-btn" onclick="toggleAtt(this,'no')">✗</button>
-            </div>
-          </div>`).join('')}
-    </div>
-    ${invs.length > 0 ? `
-      <div class="inv-header">
-        <span class="inv-tag">INVITAD@S</span>
-        <span style="font-size:11px;color:var(--m)">De ${INV_MAP[cat]}</span>
-      </div>
-      <div class="plist">
-        ${invs.map(p => `
-          <div class="att-row" data-id="${p.id}">
-            <div class="pnum inv">${p.dorsal}</div>
-            <div style="flex:1;font-size:13px;color:var(--t)">${p.name} ${p.surname||''}<br><span class="psub">INVITAD@</span></div>
-            <div class="att-btns">
-              <button class="att-btn" onclick="toggleAtt(this,'yes')">✓</button>
-              <button class="att-btn" onclick="toggleAtt(this,'no')">✗</button>
-            </div>
-          </div>`).join('')}
-      </div>` : ''}
-    <button class="btn-gold" style="width:100%;margin-top:10px" onclick="saveAttendance()">Guardar asistencia</button>
-  `;
-}
-
-window.toggleAtt = function(btn, type) {
-  const tog = btn.closest('.att-btns');
-  tog.querySelectorAll('.att-btn').forEach(b => { b.className = 'att-btn'; });
-  btn.classList.add(type === 'yes' ? 'yes' : 'no');
-};
-
-window.saveAttendance = async function() {
-  const rows = document.querySelectorAll('.att-row');
-  const records = [];
-  rows.forEach(row => {
-    const yes = row.querySelector('.att-btn.yes');
-    const no = row.querySelector('.att-btn.no');
-    records.push({ playerId: row.dataset.id, attended: yes ? true : no ? false : null });
-  });
-  await addDoc(collection(db,'attendance'), {
-    category: currentCat, date: new Date().toISOString(),
-    records, createdBy: currentUser.uid, createdAt: serverTimestamp()
-  });
-  alert('Asistencia guardada correctamente.');
-};
-
-// ===================== CALENDARIO =====================
-async function renderCalendario() {
-  await loadCalEvents();
-  buildCalendar();
-}
-
-async function loadCalEvents() {
-  calEvents = {};
-  const q = query(collection(db,'events'), where('category','==',currentCat));
-  const snap = await getDocs(q);
-  snap.docs.forEach(d => {
-    const ev = {id:d.id,...d.data()};
-    if (!calEvents[ev.dateKey]) calEvents[ev.dateKey] = [];
-    calEvents[ev.dateKey].push(ev);
-  });
-}
-
-function buildCalendar() {
-  const el = document.getElementById('calendario-content');
-  const first = new Date(calYear, calMonth, 1).getDay();
-  const offset = (first + 6) % 7;
-  const last = new Date(calYear, calMonth+1, 0).getDate();
-  const today = new Date();
-
-  let days = '';
-  ['L','M','X','J','V','S','D'].forEach(d => { days += `<div class="cal-day hdr">${d}</div>`; });
-  for (let i = 0; i < offset; i++) days += '<div class="cal-day"></div>';
-  for (let d = 1; d <= last; d++) {
-    const key = `${calYear}-${calMonth+1}-${d}`;
-    const isToday = today.getDate()===d && today.getMonth()===calMonth && today.getFullYear()===calYear;
-    const evs = calEvents[key]||[];
-    const dots = [...new Set(evs.map(e=>e.type))].map(t=>`<div class="cal-dot ${t}"></div>`).join('');
-    days += `<div class="cal-day ${isToday?'today':''}" onclick="openCalDay(${d},'${key}')">
-      ${d}${dots?`<div class="cal-dots">${dots}</div>`:''}
+    <div id="entreno-att-section" style="display:none">
+      <div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px;color:var(--m)"><span style="color:var(--green)">● Asiste</span><span style="color:var(--red)">● No asiste</span></div>
+      <div class="section-title">Jugadores/as — ${currentCat}</div>
+      <div class="plist" id="att-list"></div>
+      <div id="inv-att-section"></div>
+      <button class="btn-gold" style="width:100%;margin-top:10px" onclick="saveAttendance()">Guardar asistencia</button>
     </div>`;
-  }
+}
 
-  const evList = buildEvList();
-  el.innerHTML = `
-    <div class="cal-nav">
-      <button onclick="changeMonth(-1)">‹</button>
-      <span class="cal-month">${MONTHS[calMonth]} ${calYear}</span>
-      <button onclick="changeMonth(1)">›</button>
-    </div>
+window.startEntreno=async function(){
+  const players=await getPlayers(currentCat), invs=await getInvitadas(currentCat);
+  document.getElementById('entreno-att-section').style.display='block';
+  document.getElementById('att-list').innerHTML=players.length===0?'<div class="empty-state">Sin jugadores/as en esta categoría.</div>':players.map(p=>`<div class="att-row" data-id="${p.id}"><div class="pnum">${p.dorsal}</div><div style="flex:1;font-size:13px;color:var(--t)">${p.name} ${p.surname||''}</div><div class="att-btns"><button class="att-btn" onclick="toggleAtt(this,'yes')">✓</button><button class="att-btn" onclick="toggleAtt(this,'no')">✗</button></div></div>`).join('');
+  if(invs.length>0) document.getElementById('inv-att-section').innerHTML=`<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De ${INV_MAP[currentCat]}</span></div><div class="plist">${invs.map(p=>`<div class="att-row" data-id="${p.id}"><div class="pnum inv">${p.dorsal}</div><div style="flex:1;font-size:13px;color:var(--t)">${p.name} ${p.surname||''}<br><span class="psub">INVITAD@</span></div><div class="att-btns"><button class="att-btn" onclick="toggleAtt(this,'yes')">✓</button><button class="att-btn" onclick="toggleAtt(this,'no')">✗</button></div></div>`).join('')}</div>`;
+};
+
+window.toggleAtt=function(btn,type){const t=btn.closest('.att-btns');t.querySelectorAll('.att-btn').forEach(b=>{b.className='att-btn';});btn.classList.add(type==='yes'?'yes':'no');};
+
+window.saveAttendance=async function(){
+  const rows=document.querySelectorAll('.att-row'), records=[];
+  rows.forEach(row=>{const yes=row.querySelector('.att-btn.yes'),no=row.querySelector('.att-btn.no');records.push({playerId:row.dataset.id,attended:yes?true:no?false:null});});
+  await addDoc(collection(db,'attendance'),{category:currentCat,date:document.getElementById('train-date').value,time:document.getElementById('train-time').value,type:document.getElementById('train-type').value,records,createdBy:currentUser.uid,createdAt:serverTimestamp()});
+  alert('Asistencia guardada correctamente.');
+  document.getElementById('entreno-att-section').style.display='none';
+};
+
+async function renderCalendario(){await loadCalEvents();buildCalendar();}
+
+async function loadCalEvents(){
+  calEvents={};
+  const q=query(collection(db,'events'),where('category','==',currentCat));
+  const snap=await getDocs(q);
+  snap.docs.forEach(d=>{const ev={id:d.id,...d.data()};if(!calEvents[ev.dateKey])calEvents[ev.dateKey]=[];calEvents[ev.dateKey].push(ev);});
+}
+
+function buildCalendar(){
+  const el=document.getElementById('calendario-content');
+  const first=new Date(calYear,calMonth,1).getDay(), offset=(first+6)%7;
+  const last=new Date(calYear,calMonth+1,0).getDate(), today=new Date();
+  let days='';
+  ['L','M','X','J','V','S','D'].forEach(d=>{days+=`<div class="cal-day hdr">${d}</div>`;});
+  for(let i=0;i<offset;i++) days+='<div class="cal-day"></div>';
+  for(let d=1;d<=last;d++){
+    const key=`${calYear}-${calMonth+1}-${d}`;
+    const isToday=today.getDate()===d&&today.getMonth()===calMonth&&today.getFullYear()===calYear;
+    const evs=calEvents[key]||[];
+    const dotTypes=[...new Set(evs.map(e=>e.status==='cancelled'?'cancelled':e.status==='postponed'?'postponed':e.type))];
+    const dots=dotTypes.map(t=>`<div class="cal-dot ${t}"></div>`).join('');
+    days+=`<div class="cal-day${isToday?' today':''}" onclick="openCalDay(${d},'${key}')">${d}${dots?`<div class="cal-dots">${dots}</div>`:''}</div>`;
+  }
+  el.innerHTML=`
+    <div class="cal-nav"><button onclick="changeMonth(-1)">‹</button><span class="cal-month">${MONTHS[calMonth]} ${calYear}</span><button onclick="changeMonth(1)">›</button></div>
     <div class="cal-grid">${days}</div>
     <div style="display:flex;gap:10px;margin-bottom:12px;font-size:10px;color:var(--m)">
-      <span><span style="color:var(--blue)">●</span> Entreno</span>
-      <span><span style="color:var(--gl)">●</span> Partido</span>
-      <span><span style="color:#555">●</span> Cancelado</span>
-      <span><span style="color:var(--red)">●</span> Aplazado</span>
+      <span><span style="color:var(--blue)">●</span> Entreno</span><span><span style="color:var(--gl)">●</span> Partido</span><span><span style="color:#555">●</span> Cancelado</span><span><span style="color:var(--red)">●</span> Aplazado</span>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div class="section-title" style="margin:0">Eventos de ${MONTHS[calMonth]}</div>
       <button class="btn-sm-gold" style="padding:6px 14px;font-size:12px" onclick="openCalDay(null,null)">+ Añadir</button>
     </div>
-    <div id="ev-list">${evList}</div>
-  `;
+    <div id="ev-list">${buildEvList()}</div>`;
 }
 
-function buildEvList() {
-  const keys = Object.keys(calEvents)
-    .filter(k => { const p=k.split('-'); return parseInt(p[0])===calYear&&parseInt(p[1])===(calMonth+1); })
-    .sort((a,b)=>parseInt(a.split('-')[2])-parseInt(b.split('-')[2]));
-  if (!keys.length) return '<div class="empty-state">Sin eventos este mes.<br>Toca + Añadir para crear uno.</div>';
-  const icons = {e:'🏋️',p:'🤾',c:'✗',s:'⏸'};
-  const labels = {e:'Entreno',p:'Partido',c:'Cancelado',s:'Aplazado'};
-  let html = '';
-  keys.forEach(key => {
-    const day = key.split('-')[2];
-    const dn = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][new Date(calYear,calMonth,parseInt(day)).getDay()];
-    calEvents[key].forEach(ev => {
-      html += `<div class="ev-item ev-${ev.type}">
-        <span style="font-size:20px">${icons[ev.type]}</span>
+function buildEvList(){
+  const keys=Object.keys(calEvents).filter(k=>{const p=k.split('-');return parseInt(p[0])===calYear&&parseInt(p[1])===(calMonth+1);}).sort((a,b)=>parseInt(a.split('-')[2])-parseInt(b.split('-')[2]));
+  if(!keys.length) return '<div class="empty-state">Sin eventos este mes. Toca + Añadir.</div>';
+  const icons={e:'🏋️',p:'🤾'};
+  let html='';
+  keys.forEach(key=>{
+    const day=key.split('-')[2];
+    const dn=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][new Date(calYear,calMonth,parseInt(day)).getDay()];
+    calEvents[key].forEach(ev=>{
+      const st=ev.status||'active';
+      const itemCls=st==='cancelled'?'ev-cancelled':st==='postponed'?'ev-postponed':'ev-'+ev.type;
+      const tagCls=st==='cancelled'?'tag-cancelled':st==='postponed'?'tag-postponed':ev.type==='e'?'tag-e':'tag-p';
+      const tagLbl=st==='cancelled'?'Cancelado':st==='postponed'?'Aplazado':ev.type==='e'?'Entrenamiento':'Partido';
+      html+=`<div class="ev-item ${itemCls}" onclick="openEvDetail('${ev.id}')">
+        <span style="font-size:20px">${icons[ev.type]||'📅'}</span>
         <div class="ev-body">
           <div class="ev-title">${dn} ${day} — ${ev.title}</div>
-          <div class="ev-meta">${ev.meta||''}</div>
-          <span class="ev-tag tag-${ev.type}">${labels[ev.type]}</span>
+          <div class="ev-meta">${ev.meta||''}${ev.reason?' · Motivo: '+ev.reason:''}</div>
+          <span class="ev-tag ${tagCls}">${tagLbl}</span>
+          ${ev.competition?`<span class="comp-chip" style="margin-left:4px">${ev.competition}</span>`:''}
         </div>
       </div>`;
     });
@@ -794,114 +623,143 @@ function buildEvList() {
   return html;
 }
 
-window.changeMonth = async function(d) {
-  calMonth += d;
-  if (calMonth > 11) { calMonth=0; calYear++; }
-  if (calMonth < 0) { calMonth=11; calYear--; }
-  await loadCalEvents();
-  buildCalendar();
+window.changeMonth=async function(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}await loadCalEvents();buildCalendar();};
+
+window.openCalDay=function(day,key){
+  selDay=day;
+  document.getElementById('modal-day-label').textContent=day?`${day} de ${MONTHS[calMonth]}`:'Elige un día en el calendario';
+  calType='e';
+  document.getElementById('tbtn-e').classList.add('on');
+  document.getElementById('tbtn-p').classList.remove('on');
+  document.getElementById('rival-field').style.display='none';
+  document.getElementById('comp-field').style.display='none';
+  document.getElementById('train-type-field').style.display='block';
+  document.getElementById('modal-rival').value='';
+  showModal('cal-modal');
 };
 
-window.openCalDay = function(day, key) {
-  selDay = day;
-  document.getElementById('modal-day-label').textContent = day ? `${day} de ${MONTHS[calMonth]}` : 'Elige día en el calendario';
-  calType = 'e';
-  document.querySelectorAll('.type-btn').forEach((b,i) => { b.classList.toggle('on', i===0); });
-  document.getElementById('rival-field').style.display = 'none';
-  document.getElementById('motivo-field').style.display = 'none';
-  document.getElementById('modal-rival').value = '';
-  document.getElementById('modal-motivo').value = '';
-  document.getElementById('cal-modal').classList.add('show');
+window.selCalType=function(type){
+  calType=type;
+  document.getElementById('tbtn-e').classList.toggle('on',type==='e');
+  document.getElementById('tbtn-p').classList.toggle('on',type==='p');
+  document.getElementById('rival-field').style.display=type==='p'?'block':'none';
+  document.getElementById('comp-field').style.display=type==='p'?'block':'none';
+  document.getElementById('train-type-field').style.display=type==='e'?'block':'none';
 };
 
-window.selType = function(btn, type) {
-  calType = type;
-  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  document.getElementById('rival-field').style.display = type==='p' ? 'block' : 'none';
-  document.getElementById('motivo-field').style.display = (type==='c'||type==='s') ? 'block' : 'none';
+window.saveCalEvent=async function(){
+  if(!selDay){alert('Toca primero un día en el calendario.');return;}
+  const time=document.getElementById('modal-time').value||'18:30';
+  const lugar=document.getElementById('modal-lugar').value||'Pabellón Ingenio';
+  const rival=document.getElementById('modal-rival').value.trim();
+  const comp=calType==='p'?document.getElementById('modal-comp').value:'';
+  const trainType=calType==='e'?document.getElementById('modal-train-type').value:'';
+  const title=calType==='e'?`Entrenamiento${trainType&&trainType!=='Normal'?' ('+trainType+')':''}`:rival?'vs. '+rival:'Partido';
+  await addDoc(collection(db,'events'),{category:currentCat,dateKey:`${calYear}-${calMonth+1}-${selDay}`,type:calType,title,meta:`${time} · ${lugar}`,competition:comp,status:'active',createdBy:currentUser.uid,createdAt:serverTimestamp()});
+  hideModal('cal-modal');
+  await loadCalEvents(); buildCalendar();
 };
 
-window.saveCalEvent = async function() {
-  if (!selDay) { alert('Toca primero un día en el calendario.'); return; }
-  const time = document.getElementById('modal-time').value||'18:30';
-  const lugar = document.getElementById('modal-lugar').value||'Pabellón Ingenio';
-  const rival = document.getElementById('modal-rival').value.trim();
-  const motivo = document.getElementById('modal-motivo').value.trim();
-  const titles = {e:'Entrenamiento',p:rival?'vs. '+rival:'Partido',c:'Entreno cancelado',s:rival?'vs. '+rival+' — APLAZADO':'Partido aplazado'};
-  const key = `${calYear}-${calMonth+1}-${selDay}`;
-  await addDoc(collection(db,'events'), {
-    category: currentCat, dateKey: key, type: calType,
-    title: titles[calType], meta: `${time} · ${lugar}${motivo?' · '+motivo:''}`,
-    createdBy: currentUser.uid, createdAt: serverTimestamp()
-  });
-  document.getElementById('cal-modal').classList.remove('show');
-  await loadCalEvents();
-  buildCalendar();
+window.openEvDetail=async function(id){
+  const allEvs=Object.values(calEvents).flat();
+  const ev=allEvs.find(e=>e.id===id);
+  if(!ev)return;
+  selEventId=id; selEventData=ev;
+  const st=ev.status||'active';
+  const canEdit=userProfile.role==='admin'||userProfile.role==='coach';
+  const tagCls=st==='cancelled'?'tag-cancelled':st==='postponed'?'tag-postponed':ev.type==='e'?'tag-e':'tag-p';
+  const tagLbl=st==='cancelled'?'Cancelado':st==='postponed'?'Aplazado':ev.type==='e'?'Entrenamiento':'Partido';
+  document.getElementById('ev-detail-title').textContent=ev.title;
+  document.getElementById('ev-detail-body').innerHTML=`
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-sub">${ev.meta||''}</div>
+      ${ev.competition?`<div class="card-sub">${ev.competition}</div>`:''}
+      ${ev.reason?`<div class="card-sub" style="color:var(--red)">Motivo: ${ev.reason}</div>`:''}
+      <span class="ev-tag ${tagCls}" style="margin-top:8px;display:inline-block">${tagLbl}</span>
+    </div>`;
+  document.getElementById('ev-status-actions').innerHTML=canEdit&&st==='active'?`
+    <div class="form-btns" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <button class="btn-sm-out" style="flex:1" onclick="openStatusChange('cancelled')">Marcar cancelado</button>
+      <button class="btn-sm-out" style="flex:1;border-color:rgba(224,85,85,.5);color:var(--red)" onclick="openStatusChange('postponed')">Marcar aplazado</button>
+    </div>
+    <button class="btn-sm-out" style="width:100%;border-color:rgba(224,85,85,.3);color:var(--red)" onclick="deleteEvent('${id}')">Eliminar evento</button>
+  `:st!=='active'&&canEdit?`<button class="btn-sm-out" style="width:100%;margin-bottom:8px" onclick="restoreEvent('${id}')">Restaurar como activo</button>`:'';
+  showModal('ev-detail-modal');
 };
 
-window.closeModal = function(e) {
-  if (e.target.classList.contains('modal-overlay'))
-    e.target.classList.remove('show');
+window.openStatusChange=function(newStatus){
+  document.getElementById('ev-status-title').textContent=newStatus==='cancelled'?'Cancelar evento':'Aplazar evento';
+  document.getElementById('new-date-field').style.display=newStatus==='postponed'?'block':'none';
+  document.getElementById('ev-status-motivo').value='';
+  document.getElementById('ev-status-save-btn').onclick=()=>saveStatusChange(newStatus);
+  showModal('ev-status-modal');
 };
 
-// ===================== PANEL =====================
-async function renderPanel() {
-  const el = document.getElementById('panel-content');
-  el.innerHTML = `
+window.saveStatusChange=async function(newStatus){
+  const motivo=document.getElementById('ev-status-motivo').value.trim();
+  const newDate=document.getElementById('ev-new-date').value;
+  await updateDoc(doc(db,'events',selEventId),{status:newStatus,reason:motivo||''});
+  if(newStatus==='postponed'&&newDate){
+    const ev=selEventData, parts=newDate.split('-');
+    await addDoc(collection(db,'events'),{category:ev.category,dateKey:`${parts[0]}-${parseInt(parts[1])}-${parseInt(parts[2])}`,type:ev.type,title:ev.title+' (aplazado)',meta:ev.meta,competition:ev.competition||'',status:'active',createdBy:currentUser.uid,createdAt:serverTimestamp()});
+  }
+  hideModal('ev-status-modal'); hideModal('ev-detail-modal');
+  await loadCalEvents(); buildCalendar();
+};
+
+window.deleteEvent=async function(id){if(!confirm('¿Eliminar este evento?'))return;await deleteDoc(doc(db,'events',id));hideModal('ev-detail-modal');await loadCalEvents();buildCalendar();};
+window.restoreEvent=async function(id){await updateDoc(doc(db,'events',id),{status:'active',reason:''});hideModal('ev-detail-modal');await loadCalEvents();buildCalendar();};
+
+async function renderPanel(){
+  document.getElementById('panel-content').innerHTML=`
     <div class="sub-tabs">
       <div class="sub-tab active" onclick="switchPanel(this,'pan-partidos')">Partidos</div>
       <div class="sub-tab" onclick="switchPanel(this,'pan-asistencia')">Asistencia</div>
-      <div class="sub-tab" onclick="switchPanel(this,'pan-disciplina')">Disciplina</div>
     </div>
-    <div id="pan-partidos">
-      <div class="mini-grid">
-        <div class="mini-card"><div class="mini-v" id="pan-total">—</div><div class="mini-l">Partidos</div></div>
-        <div class="mini-card"><div class="mini-v">—</div><div class="mini-l">Victorias</div></div>
-        <div class="mini-card"><div class="mini-v">—</div><div class="mini-l">Goles</div></div>
-      </div>
-      <div class="empty-state">Los datos aparecerán aquí a medida que se registren partidos.</div>
-    </div>
-    <div id="pan-asistencia" style="display:none">
-      <div class="mini-grid">
-        <div class="mini-card"><div class="mini-v">—</div><div class="mini-l">Media</div></div>
-        <div class="mini-card"><div class="mini-v">—</div><div class="mini-l">Entrenos</div></div>
-        <div class="mini-card"><div class="mini-v">—</div><div class="mini-l">Jugadoras</div></div>
-      </div>
-      <div class="empty-state">Los datos de asistencia aparecerán aquí al registrar entrenos.</div>
-    </div>
-    <div id="pan-disciplina" style="display:none">
-      <div class="empty-state">Los datos de disciplina aparecerán aquí al registrar partidos.</div>
-    </div>
-  `;
+    <div id="pan-partidos"><div class="empty-state">Cargando...</div></div>
+    <div id="pan-asistencia" style="display:none"><div class="empty-state">Cargando...</div></div>`;
+  loadPanelPartidos();
 }
 
-window.switchPanel = function(el, id) {
-  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  ['pan-partidos','pan-asistencia','pan-disciplina'].forEach(p => {
-    document.getElementById(p).style.display = p===id ? 'block' : 'none';
+async function loadPanelPartidos(){
+  const el=document.getElementById('pan-partidos');
+  const q=query(collection(db,'matches'),where('category','==',currentCat),where('status','==','finished'));
+  const snap=await getDocs(q);
+  if(snap.empty){el.innerHTML='<div class="empty-state">Aún no hay partidos finalizados.</div>';return;}
+  const matches=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const byComp={};
+  matches.forEach(m=>{const c=m.competition||'Sin competición';if(!byComp[c])byComp[c]=[];byComp[c].push(m);});
+  let html=`<div class="mini-grid"><div class="mini-card"><div class="mini-v">${matches.length}</div><div class="mini-l">Partidos</div></div><div class="mini-card"><div class="mini-v">${matches.reduce((s,m)=>s+(m.scoreHome||0),0)}</div><div class="mini-l">Goles</div></div><div class="mini-card"><div class="mini-v">${Object.keys(byComp).length}</div><div class="mini-l">Competiciones</div></div></div>`;
+  Object.entries(byComp).forEach(([comp,ms])=>{
+    html+=`<div class="section-title">${comp}</div>`;
+    html+=ms.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(m=>`<div class="match-item" onclick="showMatchActa('${m.id}')"><div class="card-row"><div class="card-title">vs. ${m.rival}</div><div style="font-size:14px;font-weight:700;color:var(--gl)">${m.scoreHome??0} – ${m.scoreAway??0}</div></div><div class="card-sub">${new Date(m.date).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}</div></div>`).join('');
   });
+  el.innerHTML=html;
+}
+
+window.switchPanel=function(el,id){
+  document.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['pan-partidos','pan-asistencia'].forEach(p=>{document.getElementById(p).style.display=p===id?'block':'none';});
+  if(id==='pan-partidos') loadPanelPartidos();
 };
 
-// ===================== ADMIN — PLANTILLA =====================
-window.renderAdminPlantilla = async function() {
-  const el = document.getElementById('inicio-content');
-  const players = await getPlayers(currentCat);
-
-  el.innerHTML = `
-    <button class="nav-btn" style="margin-bottom:14px" onclick="renderInicio()">← Volver al inicio</button>
-    <div class="section-title">Gestionar plantilla</div>
-    <div class="cat-sel" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-      ${CATS.map(c=>`<div class="cat-chip ${c===currentCat?'on':''}" style="${c===currentCat?'background:var(--gp);border-color:var(--bs)':''}" onclick="changeAdminCat('${c}')">${c}</div>`).join('')}
+window.renderAdminPlantilla=async function(){
+  const el=document.getElementById('inicio-content');
+  const players=await getPlayers(currentCat);
+  el.innerHTML=`
+    <button class="btn-back" onclick="renderInicio()">← Volver al inicio</button>
+    <div class="section-title">Gestionar plantillas</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      ${CATS.map(c=>`<div style="padding:5px 11px;border-radius:20px;font-size:11px;cursor:pointer;border:.5px solid ${c===currentCat?'var(--bs)':'var(--br)'};background:${c===currentCat?'var(--gp)':'var(--d)'};color:${c===currentCat?'var(--g)':'var(--m)'}" onclick="changeAdminCat('${c}')">${c}</div>`).join('')}
     </div>
     <div class="form-card" id="add-player-form" style="display:none">
-      <div class="form-title">Nueva jugadora — ${currentCat}</div>
+      <div class="form-title">Nuevo/a jugador/a — ${currentCat}</div>
       <div class="form-row">
         <div class="form-field"><label>Nombre</label><input type="text" id="inp-name" placeholder="Nombre"/></div>
         <div class="form-field"><label>Apellidos</label><input type="text" id="inp-surname" placeholder="Apellidos"/></div>
       </div>
-      <div class="form-field" style="max-width:120px"><label>Dorsal</label><input type="number" id="inp-dorsal" placeholder="Nº"/></div>
+      <div class="form-field" style="max-width:130px"><label>Dorsal</label><input type="number" id="inp-dorsal" placeholder="Nº"/></div>
       <div class="form-btns">
         <button class="btn-sm-gold" onclick="addPlayer()">Guardar</button>
         <button class="btn-sm-out" onclick="document.getElementById('add-player-form').style.display='none'">Cancelar</button>
@@ -912,140 +770,98 @@ window.renderAdminPlantilla = async function() {
       <button class="btn-sm-gold" style="padding:6px 14px;font-size:12px" onclick="document.getElementById('add-player-form').style.display='block'">+ Añadir</button>
     </div>
     <div class="plist" id="admin-plist">
-      ${players.length===0
-        ? '<div class="empty-state">Sin jugadoras. Añade la primera.</div>'
-        : players.map(p=>`
-          <div class="prow">
-            <div class="pnum">${p.dorsal}</div>
-            <div class="pname">${p.name} ${p.surname||''}</div>
-            <button class="del-btn" onclick="deletePlayer('${p.id}')">Baja</button>
-          </div>`).join('')}
+      ${players.length===0?'<div class="empty-state">Sin jugadores/as. Añade el/la primero/a.</div>':players.map(p=>`<div class="prow"><div class="pnum">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}</div><button class="del-btn" onclick="deletePlayer('${p.id}')">Baja</button></div>`).join('')}
     </div>
-    <div class="text-muted" style="text-align:center;margin-top:8px">Cambios visibles de inmediato para la entrenadora</div>
-  `;
+    <div class="text-muted" style="text-align:center;margin-top:8px">Cambios visibles de inmediato para el/la entrenador/a</div>`;
 };
 
-window.changeAdminCat = async function(cat) {
-  currentCat = cat;
-  document.getElementById('cat-chip').textContent = cat + ' ↓';
+window.changeAdminCat=async function(cat){currentCat=cat;document.getElementById('cat-chip').textContent=cat+' ↓';await renderAdminPlantilla();};
+window.addPlayer=async function(){
+  const name=document.getElementById('inp-name').value.trim(), surname=document.getElementById('inp-surname').value.trim(), dorsal=parseInt(document.getElementById('inp-dorsal').value);
+  if(!name||!dorsal){alert('Nombre y dorsal son obligatorios.');return;}
+  await addDoc(collection(db,'players'),{name,surname,dorsal,category:currentCat,active:true,createdBy:currentUser.uid,createdAt:serverTimestamp()});
   await renderAdminPlantilla();
 };
+window.deletePlayer=async function(id){if(!confirm('¿Dar de baja a este/esta jugador/a?'))return;await updateDoc(doc(db,'players',id),{active:false});await renderAdminPlantilla();};
 
-window.addPlayer = async function() {
-  const name = document.getElementById('inp-name').value.trim();
-  const surname = document.getElementById('inp-surname').value.trim();
-  const dorsal = parseInt(document.getElementById('inp-dorsal').value);
-  if (!name || !dorsal) { alert('Nombre y dorsal son obligatorios.'); return; }
-  await addDoc(collection(db,'players'), {
-    name, surname, dorsal, category: currentCat,
-    active: true, createdBy: currentUser.uid, createdAt: serverTimestamp()
+window.renderAdminUsuarios=async function(){
+  const el=document.getElementById('inicio-content');
+  const snap=await getDocs(collection(db,'users'));
+  const users=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const byRole={admin:users.filter(u=>u.role==='admin'),coach:users.filter(u=>u.role==='coach'),colab:users.filter(u=>u.role==='colab')};
+  const roleColors={admin:'var(--gp)/var(--bs)/var(--gl)',coach:'var(--blue-bg)/var(--blue-border)/var(--blue)',colab:'rgba(125,201,125,.1)/rgba(125,201,125,.3)/var(--green)'};
+  const sectionTitles={admin:'Administradores/as',coach:'Entrenadores/as',colab:'Colaboradores/as'};
+  let usersHtml='';
+  Object.entries(byRole).forEach(([role,us])=>{
+    const [bg,border,color]=roleColors[role].split('/');
+    usersHtml+=`<div class="section-title" style="color:${color}">${sectionTitles[role]}</div><div class="plist">${us.map(u=>`<div class="prow"><div class="pnum" style="background:${bg};border-color:${border};color:${color};font-size:11px">${u.name[0]}</div><div class="pname">${u.name}<br><span class="psub">${u.email||''}${u.category?' · '+u.category:''}</span></div><span class="badge ${ROLE_BADGES[role]}">${ROLE_LABELS[role]}</span></div>`).join('')||'<div class="empty-state" style="padding:12px">Sin registros.</div>'}</div>`;
   });
-  await renderAdminPlantilla();
-};
-
-window.deletePlayer = async function(id) {
-  if (!confirm('¿Dar de baja a esta jugadora?')) return;
-  await updateDoc(doc(db,'players',id), {active: false});
-  await renderAdminPlantilla();
-};
-
-// ===================== ADMIN — USUARIOS =====================
-window.renderAdminUsuarios = async function() {
-  const el = document.getElementById('inicio-content');
-  const snap = await getDocs(collection(db,'users'));
-  const users = snap.docs.map(d=>({id:d.id,...d.data()}));
-  const admins = users.filter(u=>u.role==='admin');
-  const coaches = users.filter(u=>u.role==='coach');
-
-  el.innerHTML = `
-    <button class="nav-btn" style="margin-bottom:14px" onclick="renderInicio()">← Volver al inicio</button>
-    <div class="section-title" style="color:var(--gl)">Administradoras</div>
-    <div class="plist">
-      ${admins.map(u=>`
-        <div class="prow">
-          <div class="pnum" style="background:var(--gp);border-color:var(--bs);color:var(--g);font-size:11px">${u.name[0]}</div>
-          <div class="pname">${u.name}<br><span class="psub">${u.email}</span></div>
-          <span class="badge badge-admin">Admin</span>
-        </div>`).join('') || '<div class="empty-state">Sin administradoras.</div>'}
-    </div>
-    <div class="section-title" style="color:var(--blue)">Entrenadoras</div>
-    <div class="plist">
-      ${coaches.map(u=>`
-        <div class="prow">
-          <div class="pnum" style="background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue);font-size:11px">${u.name[0]}</div>
-          <div class="pname">${u.name}<br><span class="psub">${u.category}</span></div>
-          <span class="badge badge-coach">${(u.category||'').split(' ')[0]}</span>
-        </div>`).join('') || '<div class="empty-state">Sin entrenadoras aún.</div>'}
-    </div>
-    <div class="card" style="border-color:var(--bs);margin-top:8px">
-      <div style="font-size:12px;color:var(--g);font-weight:700;margin-bottom:10px">Añadir usuaria</div>
+  el.innerHTML=`
+    <button class="btn-back" onclick="renderInicio()">← Volver al inicio</button>
+    ${usersHtml}
+    <div class="form-card" style="margin-top:8px">
+      <div class="form-title">Añadir usuario/a</div>
       <div class="form-field"><label>Nombre</label><input type="text" id="new-name" placeholder="Nombre completo"/></div>
       <div class="form-field"><label>Email</label><input type="email" id="new-email" placeholder="email@ejemplo.com"/></div>
-      <div class="form-field"><label>Rol</label>
-        <select id="new-role" onchange="toggleCatField()">
-          <option value="coach">Entrenadora</option>
-          <option value="admin">Administradora</option>
-        </select>
-      </div>
-      <div class="form-field" id="cat-field">
-        <label>Categoría</label>
-        <select id="new-cat">
-          ${CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
-        </select>
-      </div>
-      <div style="font-size:11px;color:var(--m);margin-bottom:10px">Se enviará un email con instrucciones para crear la contraseña.</div>
-      <button class="btn-sm-gold" style="width:100%" onclick="createUser()">Crear acceso</button>
+      <div class="form-field"><label>Rol</label><select id="new-role" onchange="toggleCatField()"><option value="coach">Entrenador/a</option><option value="colab">Colaborador/a</option><option value="admin">Administrador/a</option></select></div>
+      <div class="form-field" id="cat-field"><label>Categoría</label><select id="new-cat">${CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
+      <div style="font-size:11px;color:var(--m);margin-bottom:10px">Tras crear el perfil aquí, crea también el usuario en Firebase Authentication con el mismo email.</div>
+      <button class="btn-sm-gold" style="width:100%" onclick="createUserProfile()">Crear perfil</button>
       <div id="user-msg" style="font-size:12px;text-align:center;margin-top:8px;min-height:16px"></div>
+    </div>`;
+};
+
+window.toggleCatField=function(){document.getElementById('cat-field').style.display=document.getElementById('new-role').value==='admin'?'none':'block';};
+window.createUserProfile=async function(){
+  const name=document.getElementById('new-name').value.trim(), email=document.getElementById('new-email').value.trim();
+  const role=document.getElementById('new-role').value, cat=role!=='admin'?document.getElementById('new-cat').value:null;
+  const msg=document.getElementById('user-msg');
+  if(!name||!email){msg.style.color='var(--red)';msg.textContent='Nombre y email son obligatorios.';return;}
+  try{
+    await addDoc(collection(db,'pending_users'),{name,email,role,category:cat,createdBy:currentUser.uid,createdAt:serverTimestamp()});
+    msg.style.color='var(--green)';msg.textContent='✓ Perfil guardado. Crea el usuario en Firebase Authentication: '+email;
+  }catch(e){msg.style.color='var(--red)';msg.textContent='Error: '+e.message;}
+};
+
+window.renderAdminCompeticiones=async function(){
+  const el=document.getElementById('inicio-content');
+  const snap=await getDocs(collection(db,'competitions'));
+  const comps=snap.docs.map(d=>({id:d.id,...d.data()}));
+  el.innerHTML=`
+    <button class="btn-back" onclick="renderInicio()">← Volver al inicio</button>
+    <div class="section-title">Competiciones</div>
+    <div class="plist" id="comp-list">
+      ${comps.length===0?'<div class="empty-state">Sin competiciones. Añade las de esta temporada.</div>':comps.map(c=>`<div class="prow"><span style="font-size:18px;margin-right:6px">🏆</span><div class="pname">${c.name}<br><span class="psub">${c.season||''}</span></div><button class="del-btn" onclick="deleteComp('${c.id}')">Eliminar</button></div>`).join('')}
     </div>
-  `;
+    <div class="form-card" style="margin-top:8px">
+      <div class="form-title">Nueva competición</div>
+      <div class="form-field"><label>Nombre</label><input type="text" id="comp-name" placeholder="Ej: Liga 2026/27"/></div>
+      <div class="form-field"><label>Temporada</label><input type="text" id="comp-season" placeholder="2026/27" value="2026/27"/></div>
+      <button class="btn-sm-gold" style="width:100%" onclick="addComp()">Añadir</button>
+    </div>`;
 };
 
-window.toggleCatField = function() {
-  const role = document.getElementById('new-role').value;
-  document.getElementById('cat-field').style.display = role==='coach' ? 'block' : 'none';
+window.addComp=async function(){
+  const name=document.getElementById('comp-name').value.trim();
+  if(!name){alert('Introduce el nombre.');return;}
+  await addDoc(collection(db,'competitions'),{name,season:document.getElementById('comp-season').value.trim(),createdBy:currentUser.uid,createdAt:serverTimestamp()});
+  await renderAdminCompeticiones();
 };
+window.deleteComp=async function(id){if(!confirm('¿Eliminar esta competición?'))return;await deleteDoc(doc(db,'competitions',id));await renderAdminCompeticiones();};
 
-window.createUser = async function() {
-  const name = document.getElementById('new-name').value.trim();
-  const email = document.getElementById('new-email').value.trim();
-  const role = document.getElementById('new-role').value;
-  const cat = role==='coach' ? document.getElementById('new-cat').value : null;
-  const msg = document.getElementById('user-msg');
-  if (!name||!email) { msg.style.color='var(--red)'; msg.textContent='Nombre y email son obligatorios.'; return; }
-  try {
-    await setDoc(doc(db,'pending_users',email), {
-      name, email, role, category: cat,
-      createdBy: currentUser.uid, createdAt: serverTimestamp()
-    });
-    msg.style.color='var(--green)';
-    msg.textContent='✓ Usuario pendiente creado. Debes crear su cuenta en Firebase Authentication y añadir su perfil manualmente por ahora.';
-  } catch(e) {
-    msg.style.color='var(--red)'; msg.textContent='Error: ' + e.message;
-  }
+window.showCatModal=function(){
+  document.getElementById('cat-list').innerHTML=CATS.map(c=>`<button class="nav-btn" onclick="setCat('${c}')" style="margin-bottom:7px"><span>${c}</span>${c===currentCat?'<span style="color:var(--g)">✓</span>':'<span class="nav-arrow">›</span>'}</button>`).join('');
+  showModal('cat-modal');
 };
+window.setCat=async function(cat){currentCat=cat;document.getElementById('cat-chip').textContent=cat+' ↓';hideModal('cat-modal');const active=document.querySelector('.tab.active')?.dataset?.screen||'inicio';goTo(active,null);};
 
-// ===================== CAT MODAL =====================
-window.showCatModal = function() {
-  const list = document.getElementById('cat-list');
-  list.innerHTML = CATS.map(c=>`
-    <button class="nav-btn" onclick="setCat('${c}')" style="margin-bottom:7px">
-      <span>${c}</span>
-      ${c===currentCat?'<span style="color:var(--g)">✓</span>':'<span class="nav-arrow">›</span>'}
-    </button>`).join('');
-  document.getElementById('cat-modal').classList.add('show');
-};
+function showModal(id){document.getElementById(id).classList.add('show');}
+function hideModal(id){document.getElementById(id).classList.remove('show');}
+window.hideModal=hideModal;
+window.closeModalClick=function(e){if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('show');};
 
-window.setCat = async function(cat) {
-  currentCat = cat;
-  document.getElementById('cat-chip').textContent = cat + ' ↓';
-  document.getElementById('cat-modal').classList.remove('show');
-  const active = document.querySelector('.tab.active')?.dataset?.screen||'inicio';
-  goTo(active, null);
-};
-
-// ===================== UTILS =====================
-function show(id) { document.getElementById(id).style.display = id==='app' ? 'flex' : id==='loading' ? 'flex' : 'flex'; }
-function hide(id) { document.getElementById(id).style.display = 'none'; }
+function showFlex(id){document.getElementById(id).style.display='flex';}
+function hide(id){document.getElementById(id).style.display='none';}
 </script>
 </body>
 </html>
