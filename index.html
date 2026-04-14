@@ -336,7 +336,7 @@ window.goTo=function(screen,tab){
   if(r[screen]) r[screen]();
 };
 
-async function renderInicio(){
+window.renderInicio=async function renderInicio(){
   const el=document.getElementById('inicio-content');
   const isAdmin=userProfile.role==='admin', isColab=userProfile.role==='colab';
   el.innerHTML=`
