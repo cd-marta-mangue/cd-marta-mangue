@@ -278,7 +278,7 @@ const db = getFirestore(fireApp);
 let currentUser=null, userProfile=null, currentCat=null;
 let calEvents={}, calMonth=new Date().getMonth(), calYear=new Date().getFullYear();
 let calType='e', selDay=null, selEventId=null, selEventData=null;
-let matchSelPlayer=null, matchScoreHome=0, matchEvents=[], activeMatchId=null;
+let matchSelPlayer=null, matchScoreHome=0, matchScoreAway=0, matchEvents=[], activeMatchId=null;
 
 const CATS=['Benjamín (Mixto)','Alevín Femenino','Alevín Masculino','Infantil Femenino','Infantil Masculino','Cadete Femenino','Cadete Masculino','Juvenil Femenino','Juvenil Masculino'];
 const INV_MAP={'Alevín Femenino':'Benjamín (Mixto)','Alevín Masculino':'Benjamín (Mixto)','Infantil Femenino':'Alevín Femenino','Infantil Masculino':'Alevín Masculino','Cadete Femenino':'Infantil Femenino','Cadete Masculino':'Infantil Masculino','Juvenil Femenino':'Cadete Femenino','Juvenil Masculino':'Cadete Masculino'};
@@ -407,6 +407,7 @@ async function renderPartido(){
       </div>
       <div class="form-field"><label>Lugar</label><input type="text" id="match-location" placeholder="Pabellón Ingenio"/></div>
       <div class="form-field"><label>Competición</label><select id="match-comp">${comps.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
+      <div class="form-field"><label>¿Jugamos de...?</label><select id="match-venue"><option value="local">Local (en casa)</option><option value="visitante">Visitante (fuera)</option></select></div>
       <button class="btn-sm-gold" style="width:100%;margin-top:4px" onclick="startMatch()">Iniciar partido</button>
     </div>
     <div class="section-title">Historial de partidos</div>
@@ -422,7 +423,7 @@ async function loadMatchHistory(){
   const matches=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.date)-new Date(a.date));
   el.innerHTML=matches.map(m=>`
     <div class="match-item" onclick="showMatchActa('${m.id}')">
-      <div class="card-row"><div class="card-title">vs. ${m.rival||'—'}</div><div style="font-size:14px;font-weight:700;color:var(--gl)">${m.scoreHome??0} – ${m.scoreAway??0}</div></div>
+      <div class="card-row"><div class="card-title">${(!m.venue||m.venue==='local')?'vs. '+m.rival:m.rival+' vs. MM'}</div><div style="font-size:14px;font-weight:700;color:var(--gl)">${(!m.venue||m.venue==='local')?(m.scoreHome??0)+' – '+(m.scoreAway??0):(m.scoreAway??0)+' – '+(m.scoreHome??0)}</div></div>
       <div class="card-sub">${new Date(m.date).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})} · ${m.location||''}</div>
       ${m.competition?`<span class="comp-chip">${m.competition}</span>`:''}
       ${m.status==='active'?'<span class="status-active" style="margin-left:6px">En curso</span>':''}
@@ -432,13 +433,14 @@ async function loadMatchHistory(){
 window.startMatch=async function(){
   const rival=document.getElementById('match-rival').value.trim();
   if(!rival){alert('Introduce el nombre del rival.');return;}
+  const venue=document.getElementById('match-venue').value;
   const ref=await addDoc(collection(db,'matches'),{
     category:currentCat, rival, date:document.getElementById('match-date').value,
     time:document.getElementById('match-time').value, location:document.getElementById('match-location').value.trim(),
-    competition:document.getElementById('match-comp').value, scoreHome:0, scoreAway:0,
+    competition:document.getElementById('match-comp').value, venue, scoreHome:0, scoreAway:0,
     status:'active', events:[], createdBy:currentUser.uid, createdAt:serverTimestamp()
   });
-  activeMatchId=ref.id; matchScoreHome=0; matchEvents=[];
+  activeMatchId=ref.id; matchScoreHome=0; matchScoreAway=0; matchEvents=[];
   await loadActiveMatch(ref.id);
 };
 
@@ -447,17 +449,29 @@ window.loadActiveMatch=async function(id){
   const snap=await getDoc(doc(db,'matches',id));
   if(!snap.exists()){el.innerHTML='<div class="empty-state">Partido no encontrado.</div>';return;}
   const m={id:snap.id,...snap.data()};
-  activeMatchId=id; matchScoreHome=m.scoreHome||0; matchEvents=m.events||[];
+  activeMatchId=id; matchScoreHome=m.scoreHome||0; matchScoreAway=m.scoreAway||0; matchEvents=m.events||[];
+  const isLocal=!m.venue||m.venue==='local';
+  const teamLeft=isLocal?'C.D. Marta Mangué':m.rival;
+  const teamRight=isLocal?m.rival:'C.D. Marta Mangué';
+  const scoreLeft=isLocal?matchScoreHome:matchScoreAway;
+  const scoreRight=isLocal?matchScoreAway:matchScoreHome;
   const players=await getPlayers(m.category), invs=await getInvitadas(m.category);
   el.innerHTML=`
     <div class="scoreboard">
       <div class="score-teams">
-        <div class="score-team home">Las Panteras</div>
-        <div class="score-nums"><div class="score-n" id="score-home">${matchScoreHome}</div><div class="score-sep">:</div><div class="score-n">${m.scoreAway||0}</div></div>
-        <div class="score-team">${m.rival}</div>
+        <div class="score-team home">${teamLeft}</div>
+        <div class="score-nums">
+          <div class="score-n" id="score-left">${scoreLeft}</div>
+          <div class="score-sep">:</div>
+          <div class="score-n" id="score-right">${scoreRight}</div>
+        </div>
+        <div class="score-team">${teamRight}</div>
       </div>
-      <div class="score-meta">${m.competition||''} · ${m.location||''}</div>
+      <div class="score-meta">${isLocal?'🏠 Local':'✈️ Visitante'} · ${m.competition||''} · ${m.location||''}</div>
       <div class="score-period">${new Date(m.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}</div>
+    </div>
+    <div style="display:flex;justify-content:center;margin-bottom:10px">
+      <button class="ev-btn" onclick="addRivalGoal()" style="font-size:13px;padding:8px 20px;border-color:rgba(224,85,85,.4);color:var(--red)">+ Gol rival</button>
     </div>
     <div class="ev-panel" id="ev-panel">
       <div class="ev-player" id="ev-player-name">Selecciona una jugadora/jugador</div>
@@ -490,17 +504,30 @@ window.selMatchPlayer=function(row,id,name,dorsal){
 
 window.regEvent=async function(type,label){
   if(!matchSelPlayer)return;
-  if(type==='gol'){matchScoreHome++;document.getElementById('score-home').textContent=matchScoreHome;}
+  if(type==='gol'){
+    matchScoreHome++;
+    const snap2=await getDoc(doc(db,'matches',activeMatchId));
+    const isLocal2=!snap2.data().venue||snap2.data().venue==='local';
+    document.getElementById(isLocal2?'score-left':'score-right').textContent=matchScoreHome;
+  }
   const ev={type,label,playerId:matchSelPlayer.id,playerName:matchSelPlayer.name,ts:new Date().toISOString()};
   matchEvents.push(ev);
   await updateDoc(doc(db,'matches',activeMatchId),{scoreHome:matchScoreHome,events:matchEvents});
-  document.getElementById('ev-log').textContent='✓ '+label+' registrado para '+matchSelPlayer.name;
+  document.getElementById('ev-log').textContent='OK: '+label+' registrado para '+matchSelPlayer.name;
+};
+
+window.addRivalGoal=async function(){
+  matchScoreAway++;
+  const snap2=await getDoc(doc(db,'matches',activeMatchId));
+  const isLocal2=!snap2.data().venue||snap2.data().venue==='local';
+  document.getElementById(isLocal2?'score-right':'score-left').textContent=matchScoreAway;
+  await updateDoc(doc(db,'matches',activeMatchId),{scoreAway:matchScoreAway});
 };
 
 window.finishMatch=async function(){
   if(!confirm('¿Finalizar y guardar el partido?'))return;
-  await updateDoc(doc(db,'matches',activeMatchId),{status:'finished'});
-  const id=activeMatchId; activeMatchId=null; matchScoreHome=0; matchEvents=[];
+  await updateDoc(doc(db,'matches',activeMatchId),{status:'finished',scoreHome:matchScoreHome,scoreAway:matchScoreAway});
+  const id=activeMatchId; activeMatchId=null; matchScoreHome=0; matchScoreAway=0; matchEvents=[];
   showMatchActa(id);
 };
 
@@ -511,8 +538,9 @@ window.showMatchActa=async function(id){
   const evHtml=(m.events||[]).length===0?'<div class="text-muted" style="text-align:center;padding:12px">Sin eventos registrados</div>':(m.events||[]).map(e=>`<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">${e.label}</div><div style="font-size:11px;color:var(--m)">${e.playerName}</div></div>`).join('');
   document.getElementById('acta-content').innerHTML=`
     <div class="card" style="border-color:var(--bs);text-align:center;margin-bottom:14px">
-      <div style="font-size:24px;font-weight:700;color:var(--gl)">${m.scoreHome??0} – ${m.scoreAway??0}</div>
-      <div style="font-size:13px;font-weight:600;color:var(--t);margin-top:4px">C.D. Marta Mangué vs. ${m.rival}</div>
+      <div style="font-size:24px;font-weight:700;color:var(--gl)">${(()=>{const l=!m.venue||m.venue==='local';return (l?m.scoreHome??0:m.scoreAway??0)+' – '+(l?m.scoreAway??0:m.scoreHome??0)})()}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--t);margin-top:4px">${(!m.venue||m.venue==='local')?'C.D. Marta Mangué vs. '+m.rival:m.rival+' vs. C.D. Marta Mangué'}</div>
+      <div style="font-size:11px;color:var(--m);margin-top:2px">${(!m.venue||m.venue==='local')?'🏠 Local':'✈️ Visitante'}</div>
       <div style="font-size:11px;color:var(--m);margin-top:3px">${new Date(m.date).toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
       ${m.competition?`<span class="comp-chip">${m.competition}</span>`:''}
     </div>
@@ -717,6 +745,10 @@ async function renderPanel(){
       <div class="sub-tab active" onclick="switchPanel(this,'pan-partidos')">Partidos</div>
       <div class="sub-tab" onclick="switchPanel(this,'pan-asistencia')">Asistencia</div>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn-sm-out" style="flex:1;font-size:12px" onclick="exportCSV()">⬇ CSV/Excel</button>
+      <button class="btn-sm-out" style="flex:1;font-size:12px" onclick="exportPDF()">⬇ PDF</button>
+    </div>
     <div id="pan-partidos"><div class="empty-state">Cargando...</div></div>
     <div id="pan-asistencia" style="display:none"><div class="empty-state">Cargando...</div></div>`;
   loadPanelPartidos();
@@ -920,6 +952,53 @@ window.addComp=async function(){
   await renderAdminCompeticiones();
 };
 window.deleteComp=async function(id){if(!confirm('¿Eliminar esta competición?'))return;await deleteDoc(doc(db,'competitions',id));await renderAdminCompeticiones();};
+
+window.exportCSV=async function(){
+  const q=query(collection(db,'matches'),where('category','==',currentCat),where('status','==','finished'));
+  const snap=await getDocs(q);
+  if(snap.empty){alert('No hay partidos finalizados para exportar.');return;}
+  const matches=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  let csv='Fecha;Rival;Local/Visitante;Competicion;Goles MM;Goles Rival;Resultado
+';
+  matches.forEach(m=>{
+    const isLocal=!m.venue||m.venue==='local';
+    const gMM=isLocal?m.scoreHome??0:m.scoreAway??0;
+    const gRival=isLocal?m.scoreAway??0:m.scoreHome??0;
+    const res=gMM>gRival?'Victoria':gMM<gRival?'Derrota':'Empate';
+    csv+=m.date+';'+m.rival+';'+(isLocal?'Local':'Visitante')+';'+(m.competition||'')+';'+gMM+';'+gRival+';'+res+'
+';
+  });
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='partidos_'+currentCat.replace(/ /g,'_')+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+};
+
+window.exportPDF=async function(){
+  const q=query(collection(db,'matches'),where('category','==',currentCat),where('status','==','finished'));
+  const snap=await getDocs(q);
+  if(snap.empty){alert('No hay partidos finalizados para exportar.');return;}
+  const matches=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const totalGoles=matches.reduce((s,m)=>{const isL=!m.venue||m.venue==='local';return s+(isL?m.scoreHome??0:m.scoreAway??0);},0);
+  const victorias=matches.filter(m=>{const isL=!m.venue||m.venue==='local';const gMM=isL?m.scoreHome??0:m.scoreAway??0;const gR=isL?m.scoreAway??0:m.scoreHome??0;return gMM>gR;}).length;
+  const derrotas=matches.filter(m=>{const isL=!m.venue||m.venue==='local';const gMM=isL?m.scoreHome??0:m.scoreAway??0;const gR=isL?m.scoreAway??0:m.scoreHome??0;return gMM<gR;}).length;
+  const empates=matches.length-victorias-derrotas;
+  const rowsHtml=matches.map(m=>{
+    const isL=!m.venue||m.venue==='local';
+    const gMM=isL?m.scoreHome??0:m.scoreAway??0;
+    const gR=isL?m.scoreAway??0:m.scoreHome??0;
+    const res=gMM>gR?'Victoria':gMM<gR?'Derrota':'Empate';
+    const color=gMM>gR?'#2e7d32':gMM<gR?'#c62828':'#555';
+    const d=new Date(m.date).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+    return '<tr><td>'+d+'</td><td>'+(isL?'vs. '+m.rival:m.rival+' vs. MM')+'</td><td>'+(isL?'Local':'Visitante')+'</td><td>'+(m.competition||'—')+'</td><td style="text-align:center;font-weight:bold">'+gMM+' – '+gR+'</td><td style="text-align:center;color:'+color+';font-weight:bold">'+res+'</td></tr>';
+  }).join('');
+  const html='<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Informe '+currentCat+'</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}body{padding:30px;color:#1a1a1a}.header{background:#0f0f0f;color:#fff;padding:20px 24px;border-radius:8px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center}.club{font-size:18px;font-weight:700;letter-spacing:.04em}.lema{font-size:10px;color:#c9a227;letter-spacing:.1em;text-transform:uppercase;margin-top:4px}.cat{font-size:13px;color:#c9a227;text-align:right}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}.stat{background:#f5f5f5;border-radius:8px;padding:14px;text-align:center}.stat-n{font-size:28px;font-weight:700;color:#c9a227}.stat-l{font-size:11px;color:#666;margin-top:3px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#1a1a1a;color:#c9a227;padding:10px 12px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase}td{padding:9px 12px;border-bottom:1px solid #eee}tr:nth-child(even){background:#fafafa}.footer{margin-top:24px;text-align:center;font-size:10px;color:#888;padding-top:14px;border-top:1px solid #eee}@media print{body{padding:15px}}</style></head><body><div class="header"><div><div class="club">C.D. MARTA MANGUÉ</div><div class="lema">Donde los sueños se entrenan</div></div><div class="cat"><div style="font-size:15px;font-weight:700">'+currentCat+'</div><div style="font-size:11px;margin-top:4px">Informe de partidos</div></div></div><div class="stats"><div class="stat"><div class="stat-n">'+matches.length+'</div><div class="stat-l">Partidos</div></div><div class="stat"><div class="stat-n" style="color:#2e7d32">'+victorias+'</div><div class="stat-l">Victorias</div></div><div class="stat"><div class="stat-n" style="color:#555">'+empates+'</div><div class="stat-l">Empates</div></div><div class="stat"><div class="stat-n" style="color:#c62828">'+derrotas+'</div><div class="stat-l">Derrotas</div></div></div><table><thead><tr><th>Fecha</th><th>Partido</th><th>Condición</th><th>Competición</th><th>Resultado</th><th>Balance</th></tr></thead><tbody>'+rowsHtml+'</tbody></table><div class="footer">C.D. Marta Mangué · Documento generado automáticamente</div></body></html>';
+  const w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),500);
+};
 
 window.showCatModal=function(){
   document.getElementById('cat-list').innerHTML=CATS.map(c=>`<button class="nav-btn" onclick="setCat('${c}')" style="margin-bottom:7px"><span>${c}</span>${c===currentCat?'<span style="color:var(--g)">✓</span>':'<span class="nav-arrow">›</span>'}</button>`).join('');
