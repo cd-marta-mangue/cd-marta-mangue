@@ -378,20 +378,16 @@ async function loadColabMatches(){
 }
 
 async function getPlayers(cat){
-  const catNorm=cat.normalize('NFC');
-  const q=query(collection(db,'players'),where('category','==',catNorm),where('active','==',true));
-  const snap=await getDocs(q);
-  // Si no encuentra con NFC, buscar todo y filtrar manualmente
-  if(snap.empty){
-    const allSnap=await getDocs(collection(db,'players'));
-    const filtered=allSnap.docs.filter(d=>{
-      const data=d.data();
-      return data.active===true && data.category && 
-             data.category.normalize('NFC')===catNorm;
-    });
-    return filtered.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.dorsal-b.dorsal);
-  }
-  return snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.dorsal-b.dorsal);
+  // Buscar TODOS los players y filtrar en cliente para evitar problemas de índice
+  const allSnap=await getDocs(collection(db,'players'));
+  const all=allSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const catNorm=(cat||'').normalize('NFC').trim();
+  const filtered=all.filter(p=>{
+    const pCat=(p.category||'').normalize('NFC').trim();
+    return p.active===true && pCat===catNorm;
+  });
+  console.log('getPlayers(',cat,') total:',all.length,'filtrados:',filtered.length);
+  return filtered.sort((a,b)=>a.dorsal-b.dorsal);
 }
 async function getInvitadas(cat){const inv=INV_MAP[cat];if(!inv)return[];return await getPlayers(inv);}
 
