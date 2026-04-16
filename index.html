@@ -501,15 +501,52 @@ window.loadActiveMatch=async function(id){
       <div class="ev-log" id="ev-log"></div>
     </div>
     <div class="section-title">Jugadores/as — ${m.category}</div>
-    <div class="plist" id="match-plist">
-      ${players.length===0?'<div class="empty-state">Sin jugadores/as en esta categoría.</div>':players.map(p=>`<div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})"><div class="pnum">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}</div></div>`).join('')}
-    </div>
+    <div class="plist" id="match-plist"></div>
     ${invs.length>0?`<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De ${INV_MAP[m.category]}</span></div><div class="plist">${invs.map(p=>`<div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})"><div class="pnum inv">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}<br><span class="psub">INVITAD@</span></div></div>`).join('')}</div>`:''}
     <div class="section-title">Eventos registrados (<span id="ev-count">${matchEvents.length}</span>)</div>
     <div class="plist" id="match-events-list" style="min-height:40px">
       ${matchEvents.length>0?matchEvents.map(e=>`<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">${e.label}</div><div style="font-size:11px;color:var(--m)">${e.playerName}</div></div>`).join(''):'<div class="empty-state" style="padding:10px">Sin eventos aún</div>'}
     </div>
     <button class="btn-gold" style="width:100%;margin-top:8px" onclick="finishMatch()">Finalizar y guardar partido</button>`;
+  // Renderizar jugadoras después del innerHTML
+  const plist=document.getElementById('match-plist');
+  if(plist){
+    if(players.length===0){
+      plist.innerHTML='<div class="empty-state">Sin jugadores/as en esta categoría.</div>';
+    } else {
+      plist.innerHTML=players.map(p=>{
+        const fullName=p.name+(p.surname?' '+p.surname:'');
+        const div=document.createElement('div');
+        div.className='prow';
+        div.innerHTML='<div class="pnum">'+p.dorsal+'</div><div class="pname">'+fullName+'</div>';
+        div.onclick=function(){selMatchPlayer(div,p.id,fullName,p.dorsal);};
+        return div.outerHTML;
+      }).join('');
+      // Re-asignar onclick porque outerHTML pierde los handlers
+      plist.querySelectorAll('.prow').forEach((row,i)=>{
+        const p=players[i];
+        const fullName=p.name+(p.surname?' '+p.surname:'');
+        row.onclick=function(){selMatchPlayer(row,p.id,fullName,p.dorsal);};
+      });
+    }
+  }
+  // Renderizar INVITAD@S
+  if(invs.length>0){
+    const invSection=document.createElement('div');
+    invSection.innerHTML='<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De '+INV_MAP[m.category]+'</span></div>';
+    const invList=document.createElement('div');
+    invList.className='plist';
+    invList.innerHTML=invs.map(p=>{
+      const fullName=p.name+(p.surname?' '+p.surname:'');
+      return '<div class="prow" data-id="'+p.id+'" data-name="'+fullName+'" data-dorsal="'+p.dorsal+'"><div class="pnum inv">'+p.dorsal+'</div><div class="pname">'+fullName+'<br><span class="psub">INVITAD@</span></div></div>';
+    }).join('');
+    invList.querySelectorAll('.prow').forEach(row=>{
+      const id=row.dataset.id, name=row.dataset.name, dorsal=parseInt(row.dataset.dorsal);
+      row.onclick=function(){selMatchPlayer(row,id,name,dorsal);};
+    });
+    plist.after(invSection);
+    invSection.after(invList);
+  }
 };
 
 window.selMatchPlayer=function(row,id,name,dorsal){
