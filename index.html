@@ -958,15 +958,13 @@ window.exportCSV=async function(){
   const snap=await getDocs(q);
   if(snap.empty){alert('No hay partidos finalizados para exportar.');return;}
   const matches=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(a.date)-new Date(b.date));
-  let csv='Fecha;Rival;Local/Visitante;Competicion;Goles MM;Goles Rival;Resultado
-';
+  let csv='Fecha;Rival;Local/Visitante;Competicion;Goles MM;Goles Rival;Resultado\n';
   matches.forEach(m=>{
     const isLocal=!m.venue||m.venue==='local';
     const gMM=isLocal?m.scoreHome??0:m.scoreAway??0;
     const gRival=isLocal?m.scoreAway??0:m.scoreHome??0;
     const res=gMM>gRival?'Victoria':gMM<gRival?'Derrota':'Empate';
-    csv+=m.date+';'+m.rival+';'+(isLocal?'Local':'Visitante')+';'+(m.competition||'')+';'+gMM+';'+gRival+';'+res+'
-';
+    csv+=m.date+';'+m.rival+';'+(isLocal?'Local':'Visitante')+';'+(m.competition||'')+';'+gMM+';'+gRival+';'+res+'\n';
   });
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
