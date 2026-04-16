@@ -566,6 +566,14 @@ window.loadActiveMatch=async function(id){
       </div>
       <div class="score-meta">${isLocal?'🏠 Local':'✈️ Visitante'} · ${m.competition||''} · ${m.location||''}</div>
       <div class="score-period">${new Date(m.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}</div>
+      <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:12px">
+        <div style="font-size:28px;font-weight:700;color:var(--t);font-variant-numeric:tabular-nums;min-width:80px;text-align:center" id="crono-display">00:00</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+        <button onclick="cronoStart()" id="btn-start" style="padding:6px 16px;border-radius:8px;background:var(--g);color:var(--b);border:none;font-size:12px;font-weight:700;cursor:pointer">▶ Iniciar</button>
+        <button onclick="cronoPause()" id="btn-pause" style="padding:6px 16px;border-radius:8px;background:var(--s);color:var(--m);border:.5px solid var(--br);font-size:12px;cursor:pointer;display:none">⏸ Pausar</button>
+        <button onclick="cronoReset()" style="padding:6px 16px;border-radius:8px;background:var(--s);color:var(--m);border:.5px solid var(--br);font-size:12px;cursor:pointer">↺ Reiniciar</button>
+      </div>
     </div>
         <div style="display:flex;gap:6px;margin-bottom:10px">
       <button class="ev-btn" onclick="addRivalGoal()" style="flex:1;font-size:12px;padding:7px 8px;border-color:rgba(224,85,85,.4);color:var(--red)">+ Gol rival</button>
@@ -630,6 +638,48 @@ window.loadActiveMatch=async function(id){
     plist.after(invSection);
     invSection.after(invList);
   }
+};
+
+let cronoInterval=null, cronoSeconds=0, cronoRunning=false;
+
+function cronoTick(){
+  cronoSeconds++;
+  const m=Math.floor(cronoSeconds/60).toString().padStart(2,'0');
+  const s=(cronoSeconds%60).toString().padStart(2,'0');
+  const el=document.getElementById('crono-display');
+  if(el) el.textContent=m+':'+s;
+}
+
+window.cronoStart=function(){
+  if(cronoRunning) return;
+  cronoRunning=true;
+  cronoInterval=setInterval(cronoTick,1000);
+  const btnStart=document.getElementById('btn-start');
+  const btnPause=document.getElementById('btn-pause');
+  if(btnStart) btnStart.style.display='none';
+  if(btnPause) btnPause.style.display='block';
+};
+
+window.cronoPause=function(){
+  if(!cronoRunning) return;
+  cronoRunning=false;
+  clearInterval(cronoInterval);
+  const btnStart=document.getElementById('btn-start');
+  const btnPause=document.getElementById('btn-pause');
+  if(btnStart){btnStart.style.display='block';btnStart.textContent='▶ Continuar';}
+  if(btnPause) btnPause.style.display='none';
+};
+
+window.cronoReset=function(){
+  cronoRunning=false;
+  clearInterval(cronoInterval);
+  cronoSeconds=0;
+  const el=document.getElementById('crono-display');
+  if(el) el.textContent='00:00';
+  const btnStart=document.getElementById('btn-start');
+  const btnPause=document.getElementById('btn-pause');
+  if(btnStart){btnStart.style.display='block';btnStart.textContent='▶ Iniciar';}
+  if(btnPause) btnPause.style.display='none';
 };
 
 window.selMatchPlayer=function(row,id,name,dorsal){
@@ -715,7 +765,7 @@ window.deleteMatch=async function(id){
 window.finishMatch=async function(){
   if(!confirm('¿Finalizar y guardar el partido?'))return;
   await updateDoc(doc(db,'matches',activeMatchId),{status:'finished',scoreHome:matchScoreHome,scoreAway:matchScoreAway});
-  const id=activeMatchId; activeMatchId=null; matchScoreHome=0; matchScoreAway=0; matchEvents=[];
+  const id=activeMatchId; activeMatchId=null; matchScoreHome=0; matchScoreAway=0; matchEvents=[]; cronoReset();
   showMatchActa(id);
 };
 
