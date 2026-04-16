@@ -469,6 +469,7 @@ window.loadActiveMatch=async function(id){
   const scoreLeft=isLocal?matchScoreHome:matchScoreAway;
   const scoreRight=isLocal?matchScoreAway:matchScoreHome;
   const players=await getPlayers(m.category), invs=await getInvitadas(m.category);
+  console.log('Renderizando partido - players:',players.length,'invs:',invs.length,'category:',m.category);
   el.innerHTML=`
     <div class="scoreboard">
       <div class="score-teams">
