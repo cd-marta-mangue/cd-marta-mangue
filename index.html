@@ -386,7 +386,7 @@ async function getPlayers(cat){
     const pCat=(p.category||'').normalize('NFC').trim();
     return p.active===true && pCat===catNorm;
   });
-  console.log('getPlayers(',cat,') total:',all.length,'filtrados:',filtered.length);
+
   return filtered.sort((a,b)=>a.dorsal-b.dorsal);
 }
 async function getInvitadas(cat){const inv=INV_MAP[cat];if(!inv)return[];return await getPlayers(inv);}
@@ -409,6 +409,8 @@ async function renderPartido(){
   if(activeMatchId){await loadActiveMatch(activeMatchId);return;}
   if(userProfile.role==='colab'){el.innerHTML='<div class="empty-state">El/la entrenador/a debe crear el partido primero.</div>';return;}
   const comps=await getCompetitions();
+  const allPlayers=await getPlayers(currentCat);
+  const allInvs=await getInvitadas(currentCat);
   el.innerHTML=`
     <div class="section-title">Nuevo partido — ${currentCat}</div>
     <div class="form-card">
@@ -421,10 +423,80 @@ async function renderPartido(){
       <div class="form-field"><label>Lugar</label><input type="text" id="match-location" placeholder="Pabellón Ingenio"/></div>
       <div class="form-field"><label>Competición</label><select id="match-comp">${comps.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
       <div class="form-field"><label>¿Jugamos de...?</label><select id="match-venue"><option value="local">Local (en casa)</option><option value="visitante">Visitante (fuera)</option></select></div>
-      <button class="btn-sm-gold" style="width:100%;margin-top:4px" onclick="startMatch()">Iniciar partido</button>
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title" style="margin:0">Convocatoria — toca para incluir/excluir</div>
+      <span style="font-size:10px;color:var(--m)" id="conv-count">0 convocadas</span>
+    </div>
+    <div class="plist" id="conv-list"></div>
+    ${allInvs.length>0?`<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De ${INV_MAP[currentCat]||''}</span></div><div class="plist" id="conv-inv-list"></div>`:''}
+    <button class="btn-sm-gold" style="width:100%;margin-top:12px;padding:13px" onclick="startMatch()">Iniciar partido con convocadas</button>
+    <div class="sep"></div>
     <div class="section-title">Historial de partidos</div>
     <div id="match-history"><div class="empty-state">Cargando...</div></div>`;
+
+  // Renderizar convocatoria
+  const convList=document.getElementById('conv-list');
+  const convPlayers=allPlayers;
+  const convInvList=document.getElementById('conv-inv-list');
+  let convocadas=new Set(allPlayers.map(p=>p.id)); // todas convocadas por defecto
+
+  function renderConvList(){
+    if(!convList) return;
+    convList.innerHTML=convPlayers.map(p=>{
+      const sel=convocadas.has(p.id);
+      return '<div class="prow conv-row" data-id="'+p.id+'" style="cursor:pointer;background:'+(sel?'rgba(201,162,39,0.1)':'')+'">'+
+        '<div class="pnum" style="background:'+(sel?'var(--gp)':'var(--s)')+';border-color:'+(sel?'var(--bs)':'var(--br)')+';color:'+(sel?'var(--g)':'var(--m)')+'">'+p.dorsal+'</div>'+
+        '<div class="pname">'+p.name+(p.surname?' '+p.surname:'')+'</div>'+
+        '<span style="font-size:11px;color:'+(sel?'var(--green)':'var(--red)')+';">'+(sel?'✓ Convocada':'✗ No convocada')+'</span>'+
+      '</div>';
+    }).join('');
+    convList.querySelectorAll('.conv-row').forEach(row=>{
+      row.onclick=function(){
+        const id=row.dataset.id;
+        if(convocadas.has(id)) convocadas.delete(id); else convocadas.add(id);
+        renderConvList();
+        renderConvInvList();
+        updateConvCount();
+      };
+    });
+  }
+
+  function renderConvInvList(){
+    if(!convInvList) return;
+    convInvList.innerHTML=allInvs.map(p=>{
+      const sel=convocadas.has(p.id);
+      return '<div class="prow conv-inv-row" data-id="'+p.id+'" style="cursor:pointer;background:'+(sel?'rgba(85,153,232,0.1)':'')+'">'+
+        '<div class="pnum inv" style="opacity:'+(sel?1:0.4)+'">'+p.dorsal+'</div>'+
+        '<div class="pname">'+p.name+(p.surname?' '+p.surname:'')+'<br><span class="psub">INVITAD@</span></div>'+
+        '<span style="font-size:11px;color:'+(sel?'var(--green)':'var(--red)')+';">'+(sel?'✓ Convocada':'✗ No convocada')+'</span>'+
+      '</div>';
+    }).join('');
+    convInvList.querySelectorAll('.conv-inv-row').forEach(row=>{
+      row.onclick=function(){
+        const id=row.dataset.id;
+        if(convocadas.has(id)) convocadas.delete(id); else convocadas.add(id);
+        renderConvList();
+        renderConvInvList();
+        updateConvCount();
+      };
+    });
+  }
+
+  function updateConvCount(){
+    const el2=document.getElementById('conv-count');
+    if(el2) el2.textContent=convocadas.size+' convocadas';
+  }
+
+  // Guardar referencia de convocadas para startMatch
+  window._convocadas=convocadas;
+  window._renderConvList=renderConvList;
+  window._renderConvInvList=renderConvInvList;
+  window._updateConvCount=updateConvCount;
+
+  renderConvList();
+  renderConvInvList();
+  updateConvCount();
   loadMatchHistory();
 }
 
@@ -452,12 +524,14 @@ async function loadMatchHistory(){
 window.startMatch=async function(){
   const rival=document.getElementById('match-rival').value.trim();
   if(!rival){alert('Introduce el nombre del rival.');return;}
+  const convIds=window._convocadas?Array.from(window._convocadas):[];
+  if(convIds.length===0){alert('Selecciona al menos una jugadora convocada.');return;}
   const venue=document.getElementById('match-venue').value;
   const ref=await addDoc(collection(db,'matches'),{
     category:currentCat, rival, date:document.getElementById('match-date').value,
     time:document.getElementById('match-time').value, location:document.getElementById('match-location').value.trim(),
     competition:document.getElementById('match-comp').value, venue, scoreHome:0, scoreAway:0,
-    status:'active', events:[], createdBy:currentUser.uid, createdAt:serverTimestamp()
+    status:'active', events:[], convocadas:convIds, createdBy:currentUser.uid, createdAt:serverTimestamp()
   });
   activeMatchId=ref.id; matchScoreHome=0; matchScoreAway=0; matchEvents=[];
   await loadActiveMatch(ref.id);
@@ -474,8 +548,11 @@ window.loadActiveMatch=async function(id){
   const teamRight=isLocal?m.rival:'C.D. Marta Mangué';
   const scoreLeft=isLocal?matchScoreHome:matchScoreAway;
   const scoreRight=isLocal?matchScoreAway:matchScoreHome;
-  const players=await getPlayers(m.category), invs=await getInvitadas(m.category);
-  console.log('Renderizando partido - players:',players.length,'invs:',invs.length,'category:',m.category);
+  const allP=await getPlayers(m.category), allI=await getInvitadas(m.category);
+  const convIds=m.convocadas&&m.convocadas.length>0?new Set(m.convocadas):null;
+  const players=convIds?allP.filter(p=>convIds.has(p.id)):allP;
+  const invs=convIds?allI.filter(p=>convIds.has(p.id)):allI;
+
   el.innerHTML=`
     <div class="scoreboard">
       <div class="score-teams">
@@ -854,6 +931,7 @@ async function renderPanel(){
   document.getElementById('panel-content').innerHTML=`
     <div class="sub-tabs">
       <div class="sub-tab active" onclick="switchPanel(this,'pan-partidos')">Partidos</div>
+      <div class="sub-tab" onclick="switchPanel(this,'pan-jugadoras')">Jugadoras</div>
       <div class="sub-tab" onclick="switchPanel(this,'pan-asistencia')">Asistencia</div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:14px">
@@ -861,6 +939,7 @@ async function renderPanel(){
       <button class="btn-sm-out" style="flex:1;font-size:12px" onclick="exportPDF()">⬇ PDF</button>
     </div>
     <div id="pan-partidos"><div class="empty-state">Cargando...</div></div>
+    <div id="pan-jugadoras" style="display:none"><div class="empty-state">Cargando...</div></div>
     <div id="pan-asistencia" style="display:none"><div class="empty-state">Cargando...</div></div>`;
   loadPanelPartidos();
 }
@@ -881,11 +960,133 @@ async function loadPanelPartidos(){
   el.innerHTML=html;
 }
 
+window.loadPanelJugadoras=async function(){
+  const el=document.getElementById('pan-jugadoras');
+  el.innerHTML='<div class="empty-state">Calculando estadísticas...</div>';
+  // Obtener todos los partidos finalizados de la categoría
+  const q=query(collection(db,'matches'),where('category','==',currentCat),where('status','==','finished'));
+  const snap=await getDocs(q);
+  const matches=snap.docs.map(d=>({id:d.id,...d.data()}));
+  // Obtener todas las jugadoras
+  const players=await getPlayers(currentCat);
+  if(!players.length){el.innerHTML='<div class="empty-state">No hay jugadoras en esta categoría.</div>';return;}
+  // Calcular estadísticas por jugadora
+  const stats={};
+  players.forEach(p=>{
+    stats[p.id]={player:p,partidos:0,goles:0,amarillas:0,rojas:0,azules:0,exclusiones:0};
+  });
+  matches.forEach(m=>{
+    const conv=m.convocadas?new Set(m.convocadas):null;
+    players.forEach(p=>{
+      if(!conv||conv.has(p.id)) stats[p.id].partidos++;
+    });
+    (m.events||[]).forEach(ev=>{
+      if(stats[ev.playerId]){
+        if(ev.type==='gol') stats[ev.playerId].goles++;
+        else if(ev.type==='amarilla') stats[ev.playerId].amarillas++;
+        else if(ev.type==='roja') stats[ev.playerId].rojas++;
+        else if(ev.type==='azul') stats[ev.playerId].azules++;
+        else if(ev.type==='exclusion') stats[ev.playerId].exclusiones++;
+      }
+    });
+  });
+  const statsList=Object.values(stats).sort((a,b)=>b.goles-a.goles||a.player.dorsal-b.player.dorsal);
+  const maxGoles=Math.max(1,...statsList.map(s=>s.goles));
+  if(!matches.length){
+    el.innerHTML='<div class="empty-state">Aún no hay partidos finalizados.</div>';
+    return;
+  }
+  el.innerHTML=`
+    <div class="mini-grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="mini-card"><div class="mini-v">${players.length}</div><div class="mini-l">Jugadoras</div></div>
+      <div class="mini-card"><div class="mini-v">${matches.length}</div><div class="mini-l">Partidos</div></div>
+    </div>
+    <div class="section-title">Estadísticas individuales</div>
+    <div class="plist" id="stats-list"></div>
+  `;
+  const statsList2=document.getElementById('stats-list');
+  statsList2.innerHTML=statsList.map(s=>`
+    <div class="prow" style="flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer" onclick="showPlayerStats('${s.player.id}')">
+      <div style="display:flex;align-items:center;gap:10px;width:100%">
+        <div class="pnum">${s.player.dorsal}</div>
+        <div class="pname" style="flex:1">${s.player.name} ${s.player.surname||''}</div>
+        <span style="font-size:11px;color:var(--m)">${s.partidos} partidos</span>
+      </div>
+      <div style="display:flex;gap:8px;padding-left:40px;flex-wrap:wrap">
+        ${s.goles>0?`<span style="font-size:11px;background:rgba(125,201,125,.15);color:var(--green);padding:2px 8px;border-radius:10px">⚽ ${s.goles}</span>`:''}
+        ${s.amarillas>0?`<span style="font-size:11px;background:rgba(232,200,74,.15);color:var(--gl);padding:2px 8px;border-radius:10px">🟨 ${s.amarillas}</span>`:''}
+        ${s.rojas>0?`<span style="font-size:11px;background:rgba(224,85,85,.12);color:var(--red);padding:2px 8px;border-radius:10px">🟥 ${s.rojas}</span>`:''}
+        ${s.azules>0?`<span style="font-size:11px;background:rgba(106,176,245,.12);color:var(--blue);padding:2px 8px;border-radius:10px">🟦 ${s.azules}</span>`:''}
+        ${s.exclusiones>0?`<span style="font-size:11px;background:rgba(224,160,85,.12);color:#e0a055;padding:2px 8px;border-radius:10px">⏱ ${s.exclusiones}</span>`:''}
+        ${s.goles===0&&s.amarillas===0&&s.rojas===0&&s.azules===0&&s.exclusiones===0?`<span style="font-size:11px;color:var(--m)">Sin eventos</span>`:''}
+      </div>
+      ${s.goles>0?`<div style="padding-left:40px;width:100%"><div style="height:6px;background:var(--s);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--g);border-radius:3px;width:${Math.round(s.goles/maxGoles*100)}%"></div></div></div>`:''}
+    </div>
+  `).join('');
+};
+
+window.showPlayerStats=async function(playerId){
+  const q=query(collection(db,'matches'),where('category','==',currentCat),where('status','==','finished'));
+  const snap=await getDocs(q);
+  const matches=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const players=await getPlayers(currentCat);
+  const player=players.find(p=>p.id===playerId);
+  if(!player) return;
+  let partidos=0,goles=0,amarillas=0,rojas=0,azules=0,exclusiones=0;
+  const historial=[];
+  matches.forEach(m=>{
+    const conv=m.convocadas?new Set(m.convocadas):null;
+    const convocado=!conv||conv.has(playerId);
+    if(convocado) partidos++;
+    const evs=(m.events||[]).filter(e=>e.playerId===playerId);
+    evs.forEach(ev=>{
+      if(ev.type==='gol') goles++;
+      else if(ev.type==='amarilla') amarillas++;
+      else if(ev.type==='roja') rojas++;
+      else if(ev.type==='azul') azules++;
+      else if(ev.type==='exclusion') exclusiones++;
+    });
+    if(convocado&&evs.length>0){
+      const isL=!m.venue||m.venue==='local';
+      historial.push({date:m.date,rival:m.rival,isLocal:isL,scoreHome:m.scoreHome??0,scoreAway:m.scoreAway??0,events:evs});
+    }
+  });
+  const modal=document.getElementById('acta-modal');
+  document.getElementById('acta-content').innerHTML=`
+    <div class="card" style="border-color:var(--bs);text-align:center;margin-bottom:14px">
+      <div class="pnum" style="width:44px;height:44px;font-size:16px;margin:0 auto 8px">${player.dorsal}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--t)">${player.name} ${player.surname||''}</div>
+      <div style="font-size:11px;color:var(--m);margin-top:2px">${currentCat}</div>
+    </div>
+    <div class="mini-grid">
+      <div class="mini-card"><div class="mini-v">${partidos}</div><div class="mini-l">Partidos</div></div>
+      <div class="mini-card"><div class="mini-v" style="color:var(--green)">${goles}</div><div class="mini-l">Goles</div></div>
+      <div class="mini-card"><div class="mini-v" style="color:var(--gl)">${amarillas}</div><div class="mini-l">Amarillas</div></div>
+    </div>
+    <div class="mini-grid">
+      <div class="mini-card"><div class="mini-v" style="color:var(--red)">${rojas}</div><div class="mini-l">Rojas</div></div>
+      <div class="mini-card"><div class="mini-v" style="color:var(--blue)">${azules}</div><div class="mini-l">Azules</div></div>
+      <div class="mini-card"><div class="mini-v" style="color:#e0a055">${exclusiones}</div><div class="mini-l">Exclusiones</div></div>
+    </div>
+    ${historial.length>0?`
+      <div class="section-title">Partidos con eventos</div>
+      <div class="plist">${historial.map(h=>{
+        const d=new Date(h.date).toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+        const gMM=h.isLocal?h.scoreHome:h.scoreAway;
+        const gR=h.isLocal?h.scoreAway:h.scoreHome;
+        return '<div class="prow"><div style="flex:1"><div class="ct" style="font-size:13px">'+(h.isLocal?'vs. '+h.rival:h.rival+' vs. MM')+'</div><div class="cs">'+d+' · '+gMM+'-'+gR+'</div></div><div style="display:flex;gap:4px;flex-wrap:wrap">'+h.events.map(e=>'<span style="font-size:11px">'+e.label+'</span>').join('')+'</div></div>';
+      }).join('')}</div>
+    `:''}
+  `;
+  showModal('acta-modal');
+};
+
 window.switchPanel=function(el,id){
   document.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  ['pan-partidos','pan-asistencia'].forEach(p=>{document.getElementById(p).style.display=p===id?'block':'none';});
+  ['pan-partidos','pan-jugadoras','pan-asistencia'].forEach(p=>{document.getElementById(p).style.display=p===id?'block':'none';});
   if(id==='pan-partidos') loadPanelPartidos();
+  if(id==='pan-jugadoras') loadPanelJugadoras();
 };
 
 window.renderAdminPlantilla=async function(){
