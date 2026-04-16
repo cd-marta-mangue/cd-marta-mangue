@@ -515,7 +515,7 @@ window.loadActiveMatch=async function(id){
     </div>
     <button class="btn-gold" style="width:100%;margin-top:8px" onclick="finishMatch()">Finalizar y guardar partido</button>`;
   // Renderizar jugadoras directamente en el innerHTML
-  const plistEl=document.getElementById('match-plist');
+  const plist=document.getElementById('match-plist');
   if(plist){
     if(players.length===0){
       plist.innerHTML='<div class="empty-state">Sin jugadores/as en esta categoría.</div>';
