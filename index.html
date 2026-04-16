@@ -422,11 +422,17 @@ async function loadMatchHistory(){
   if(snap.empty){el.innerHTML='<div class="empty-state">Aún no hay partidos registrados.</div>';return;}
   const matches=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.date)-new Date(a.date));
   el.innerHTML=matches.map(m=>`
-    <div class="match-item" onclick="showMatchActa('${m.id}')">
-      <div class="card-row"><div class="card-title">${(!m.venue||m.venue==='local')?'vs. '+m.rival:m.rival+' vs. MM'}</div><div style="font-size:14px;font-weight:700;color:var(--gl)">${(!m.venue||m.venue==='local')?(m.scoreHome??0)+' – '+(m.scoreAway??0):(m.scoreAway??0)+' – '+(m.scoreHome??0)}</div></div>
-      <div class="card-sub">${new Date(m.date).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})} · ${m.location||''}</div>
-      ${m.competition?`<span class="comp-chip">${m.competition}</span>`:''}
-      ${m.status==='active'?'<span class="status-active" style="margin-left:6px">En curso</span>':''}
+    <div class="match-item">
+      <div onclick="showMatchActa('${m.id}')" style="cursor:pointer">
+        <div class="card-row"><div class="card-title">${(!m.venue||m.venue==='local')?'vs. '+m.rival:m.rival+' vs. MM'}</div><div style="font-size:14px;font-weight:700;color:var(--gl)">${(!m.venue||m.venue==='local')?(m.scoreHome??0)+' – '+(m.scoreAway??0):(m.scoreAway??0)+' – '+(m.scoreHome??0)}</div></div>
+        <div class="card-sub">${new Date(m.date).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})} · ${m.location||''}</div>
+        ${m.competition?`<span class="comp-chip">${m.competition}</span>`:''}
+        ${m.status==='active'?'<span class="status-active" style="margin-left:6px">En curso</span>':''}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn-sm-out" style="flex:1;font-size:11px;padding:6px" onclick="showMatchActa('${m.id}')">Ver acta</button>
+        <button class="del-btn" style="font-size:11px;padding:6px 10px" onclick="deleteMatch('${m.id}')">Eliminar</button>
+      </div>
     </div>`).join('');
 }
 
@@ -470,10 +476,12 @@ window.loadActiveMatch=async function(id){
       <div class="score-meta">${isLocal?'🏠 Local':'✈️ Visitante'} · ${m.competition||''} · ${m.location||''}</div>
       <div class="score-period">${new Date(m.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}</div>
     </div>
-    <div style="display:flex;justify-content:center;margin-bottom:10px">
-      <button class="ev-btn" onclick="addRivalGoal()" style="font-size:13px;padding:8px 20px;border-color:rgba(224,85,85,.4);color:var(--red)">+ Gol rival</button>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+      <button class="ev-btn" onclick="addRivalGoal()" style="flex:1;font-size:12px;padding:7px 8px;border-color:rgba(224,85,85,.4);color:var(--red)">+ Gol rival</button>
+      <button class="ev-btn" onclick="undoRivalGoal()" style="flex:1;font-size:12px;padding:7px 8px;border-color:rgba(224,85,85,.3);color:var(--red);opacity:.7">- Gol rival</button>
+      <button class="ev-btn" onclick="undoLastEvent()" style="flex:1;font-size:12px;padding:7px 8px;border-color:rgba(201,162,39,.4);color:var(--gl)">↩ Deshacer</button>
     </div>
-    <div class="ev-panel" id="ev-panel">
+    <div class="ev-panel" id="ev-panel"><div class="ev-panel" id="ev-panel">
       <div class="ev-player" id="ev-player-name">Selecciona una jugadora/jugador</div>
       <div class="ev-btns">
         <button class="ev-btn gol" onclick="regEvent('gol','⚽ Gol')">⚽ Gol</button>
@@ -489,7 +497,10 @@ window.loadActiveMatch=async function(id){
       ${players.length===0?'<div class="empty-state">Sin jugadores/as en esta categoría.</div>':players.map(p=>`<div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})"><div class="pnum">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}</div></div>`).join('')}
     </div>
     ${invs.length>0?`<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De ${INV_MAP[m.category]}</span></div><div class="plist">${invs.map(p=>`<div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})"><div class="pnum inv">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}<br><span class="psub">INVITAD@</span></div></div>`).join('')}</div>`:''}
-    ${matchEvents.length>0?`<div class="section-title">Eventos registrados (${matchEvents.length})</div><div class="plist">${matchEvents.map(e=>`<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">${e.label}</div><div style="font-size:11px;color:var(--m)">${e.playerName}</div></div>`).join('')}</div>`:''}
+    <div class="section-title">Eventos registrados (<span id="ev-count">${matchEvents.length}</span>)</div>
+    <div class="plist" id="match-events-list" style="min-height:40px">
+      ${matchEvents.length>0?matchEvents.map(e=>`<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">${e.label}</div><div style="font-size:11px;color:var(--m)">${e.playerName}</div></div>`).join(''):'<div class="empty-state" style="padding:10px">Sin eventos aún</div>'}
+    </div>
     <button class="btn-gold" style="width:100%;margin-top:8px" onclick="finishMatch()">Finalizar y guardar partido</button>`;
 };
 
@@ -513,7 +524,50 @@ window.regEvent=async function(type,label){
   const ev={type,label,playerId:matchSelPlayer.id,playerName:matchSelPlayer.name,ts:new Date().toISOString()};
   matchEvents.push(ev);
   await updateDoc(doc(db,'matches',activeMatchId),{scoreHome:matchScoreHome,events:matchEvents});
-  document.getElementById('ev-log').textContent='OK: '+label+' registrado para '+matchSelPlayer.name;
+  const logEl=document.getElementById('ev-log');
+  if(logEl){logEl.style.color='var(--green)';logEl.textContent='OK: '+label+' registrado para '+matchSelPlayer.name;}
+  const evList=document.getElementById('match-events-list');
+  if(evList) evList.innerHTML=matchEvents.map(e=>'<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">'+e.label+'</div><div style="font-size:11px;color:var(--m)">'+e.playerName+'</div></div>').join('');
+  const evCount=document.getElementById('ev-count');
+  if(evCount) evCount.textContent=matchEvents.length;
+};
+
+window.undoLastEvent=async function(){
+  if(!matchEvents.length){
+    const log=document.getElementById('ev-log');
+    if(log){log.style.color='var(--red)';log.textContent='No hay eventos para deshacer.';}
+    return;
+  }
+  const last=matchEvents[matchEvents.length-1];
+  matchEvents.pop();
+  if(last.type==='gol'){
+    matchScoreHome=Math.max(0,matchScoreHome-1);
+    const snap2=await getDoc(doc(db,'matches',activeMatchId));
+    const isLocal2=!snap2.data().venue||snap2.data().venue==='local';
+    const scoreEl=document.getElementById(isLocal2?'score-left':'score-right');
+    if(scoreEl) scoreEl.textContent=matchScoreHome;
+  }
+  await updateDoc(doc(db,'matches',activeMatchId),{scoreHome:matchScoreHome,events:matchEvents});
+  const log=document.getElementById('ev-log');
+  if(log){log.style.color='var(--gl)';log.textContent='Deshecho: '+last.label+' de '+last.playerName;}
+  const evSection=document.getElementById('match-events-list');
+  if(evSection) evSection.innerHTML=matchEvents.length>0?matchEvents.map(e=>'<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">'+e.label+'</div><div style="font-size:11px;color:var(--m)">'+e.playerName+'</div></div>').join(''):'<div class="empty-state" style="padding:10px">Sin eventos</div>';
+};
+
+window.undoRivalGoal=async function(){
+  if(matchScoreAway<=0){
+    const log=document.getElementById('ev-log');
+    if(log){log.style.color='var(--red)';log.textContent='El marcador rival ya está en 0.';}
+    return;
+  }
+  matchScoreAway=Math.max(0,matchScoreAway-1);
+  const snap2=await getDoc(doc(db,'matches',activeMatchId));
+  const isLocal2=!snap2.data().venue||snap2.data().venue==='local';
+  const scoreEl=document.getElementById(isLocal2?'score-right':'score-left');
+  if(scoreEl) scoreEl.textContent=matchScoreAway;
+  await updateDoc(doc(db,'matches',activeMatchId),{scoreAway:matchScoreAway});
+  const log=document.getElementById('ev-log');
+  if(log){log.style.color='var(--gl)';log.textContent='Gol rival deshecho. Marcador rival: '+matchScoreAway;}
 };
 
 window.addRivalGoal=async function(){
@@ -522,6 +576,12 @@ window.addRivalGoal=async function(){
   const isLocal2=!snap2.data().venue||snap2.data().venue==='local';
   document.getElementById(isLocal2?'score-right':'score-left').textContent=matchScoreAway;
   await updateDoc(doc(db,'matches',activeMatchId),{scoreAway:matchScoreAway});
+};
+
+window.deleteMatch=async function(id){
+  if(!confirm('¿Eliminar este partido? Esta acción no se puede deshacer.'))return;
+  await deleteDoc(doc(db,'matches',id));
+  await loadMatchHistory();
 };
 
 window.finishMatch=async function(){
