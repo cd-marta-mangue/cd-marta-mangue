@@ -373,8 +373,24 @@ async function loadColabMatches(){
   const snap=await getDocs(q);
   const el=document.getElementById('colab-matches');
   if(!el) return;
-  if(snap.empty){el.innerHTML='<div class="empty-state">No hay partidos activos en tu categoría ahora mismo.</div>';return;}
-  el.innerHTML=snap.docs.map(d=>{const m={id:d.id,...d.data()};return `<div class="match-item" onclick="loadActiveMatch('${m.id}');goTo('partido',document.querySelector('[data-screen=partido]'))"><div class="card-title">vs. ${m.rival||'—'}</div><div class="card-sub">${m.competition||''} · ${m.location||''}</div><span class="status-active">En curso</span></div>`;}).join('');
+  if(snap.empty){
+    el.innerHTML='<div class="empty-state" style="padding:20px">No hay partidos en curso ahora mismo. El/la entrenador/a debe iniciarlo primero.</div>';
+    return;
+  }
+  el.innerHTML=snap.docs.map(function(d){
+    const m={id:d.id,...d.data()};
+    const isLocal=!m.venue||m.venue==='local';
+    const title=isLocal?'vs. '+m.rival:m.rival+' vs. MM';
+    return '<div class="match-item colab-enter" data-mid="'+m.id+'" style="cursor:pointer">'+
+      '<div class="card-title">'+title+'</div>'+
+      '<div class="card-sub">'+(m.competition||'')+' · '+(m.location||'')+'</div>'+
+      '<span class="status-active" style="margin-top:6px;display:inline-block">En curso</span>'+
+      '<div style="background:var(--g);color:var(--b);padding:8px;border-radius:8px;text-align:center;margin-top:8px;font-size:12px;font-weight:700">Entrar a registrar eventos</div>'+
+    '</div>';
+  }).join('');
+  el.querySelectorAll('.colab-enter').forEach(function(btn){
+    btn.addEventListener('click',function(){colabEnterMatch(btn.dataset.mid);});
+  });
 }
 
 async function getPlayers(cat){
@@ -409,8 +425,7 @@ async function renderPartido(){
   if(activeMatchId){await loadActiveMatch(activeMatchId);return;}
   if(userProfile.role==='colab'){el.innerHTML='<div class="empty-state">El/la entrenador/a debe crear el partido primero.</div>';return;}
   const comps=await getCompetitions();
-  const allPlayers=await getPlayers(currentCat);
-  const allInvs=await getInvitadas(currentCat);
+
   el.innerHTML=`
     <div class="section-title">Nuevo partido — ${currentCat}</div>
     <div class="form-card">
@@ -424,79 +439,11 @@ async function renderPartido(){
       <div class="form-field"><label>Competición</label><select id="match-comp">${comps.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')}</select></div>
       <div class="form-field"><label>¿Jugamos de...?</label><select id="match-venue"><option value="local">Local (en casa)</option><option value="visitante">Visitante (fuera)</option></select></div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div class="section-title" style="margin:0">Convocatoria — toca para incluir/excluir</div>
-      <span style="font-size:10px;color:var(--m)" id="conv-count">0 convocadas</span>
-    </div>
-    <div class="plist" id="conv-list"></div>
-    ${allInvs.length>0?`<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De ${INV_MAP[currentCat]||''}</span></div><div class="plist" id="conv-inv-list"></div>`:''}
-    <button class="btn-sm-gold" style="width:100%;margin-top:12px;padding:13px" onclick="startMatch()">Iniciar partido con convocadas</button>
+    <button class="btn-sm-gold" style="width:100%;margin-top:12px;padding:13px" onclick="saveScheduledMatch()">Guardar partido programado</button>
     <div class="sep"></div>
     <div class="section-title">Historial de partidos</div>
     <div id="match-history"><div class="empty-state">Cargando...</div></div>`;
 
-  // Renderizar convocatoria
-  const convList=document.getElementById('conv-list');
-  const convPlayers=allPlayers;
-  const convInvList=document.getElementById('conv-inv-list');
-  let convocadas=new Set(allPlayers.map(p=>p.id)); // todas convocadas por defecto
-
-  function renderConvList(){
-    if(!convList) return;
-    convList.innerHTML=convPlayers.map(p=>{
-      const sel=convocadas.has(p.id);
-      return '<div class="prow conv-row" data-id="'+p.id+'" style="cursor:pointer;background:'+(sel?'rgba(201,162,39,0.1)':'')+'">'+
-        '<div class="pnum" style="background:'+(sel?'var(--gp)':'var(--s)')+';border-color:'+(sel?'var(--bs)':'var(--br)')+';color:'+(sel?'var(--g)':'var(--m)')+'">'+p.dorsal+'</div>'+
-        '<div class="pname">'+p.name+(p.surname?' '+p.surname:'')+'</div>'+
-        '<span style="font-size:11px;color:'+(sel?'var(--green)':'var(--red)')+';">'+(sel?'✓ Convocada':'✗ No convocada')+'</span>'+
-      '</div>';
-    }).join('');
-    convList.querySelectorAll('.conv-row').forEach(row=>{
-      row.onclick=function(){
-        const id=row.dataset.id;
-        if(convocadas.has(id)) convocadas.delete(id); else convocadas.add(id);
-        renderConvList();
-        renderConvInvList();
-        updateConvCount();
-      };
-    });
-  }
-
-  function renderConvInvList(){
-    if(!convInvList) return;
-    convInvList.innerHTML=allInvs.map(p=>{
-      const sel=convocadas.has(p.id);
-      return '<div class="prow conv-inv-row" data-id="'+p.id+'" style="cursor:pointer;background:'+(sel?'rgba(85,153,232,0.1)':'')+'">'+
-        '<div class="pnum inv" style="opacity:'+(sel?1:0.4)+'">'+p.dorsal+'</div>'+
-        '<div class="pname">'+p.name+(p.surname?' '+p.surname:'')+'<br><span class="psub">INVITAD@</span></div>'+
-        '<span style="font-size:11px;color:'+(sel?'var(--green)':'var(--red)')+';">'+(sel?'✓ Convocada':'✗ No convocada')+'</span>'+
-      '</div>';
-    }).join('');
-    convInvList.querySelectorAll('.conv-inv-row').forEach(row=>{
-      row.onclick=function(){
-        const id=row.dataset.id;
-        if(convocadas.has(id)) convocadas.delete(id); else convocadas.add(id);
-        renderConvList();
-        renderConvInvList();
-        updateConvCount();
-      };
-    });
-  }
-
-  function updateConvCount(){
-    const el2=document.getElementById('conv-count');
-    if(el2) el2.textContent=convocadas.size+' convocadas';
-  }
-
-  // Guardar referencia de convocadas para startMatch
-  window._convocadas=convocadas;
-  window._renderConvList=renderConvList;
-  window._renderConvInvList=renderConvInvList;
-  window._updateConvCount=updateConvCount;
-
-  renderConvList();
-  renderConvInvList();
-  updateConvCount();
   loadMatchHistory();
 }
 
@@ -504,37 +451,77 @@ async function loadMatchHistory(){
   const el=document.getElementById('match-history');if(!el)return;
   const q=query(collection(db,'matches'),where('category','==',currentCat));
   const snap=await getDocs(q);
-  if(snap.empty){el.innerHTML='<div class="empty-state">Aún no hay partidos registrados.</div>';return;}
-  const matches=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.date)-new Date(a.date));
-  el.innerHTML=matches.map(m=>`
-    <div class="match-item">
-      <div onclick="showMatchActa('${m.id}')" style="cursor:pointer">
-        <div class="card-row"><div class="card-title">${(!m.venue||m.venue==='local')?'vs. '+m.rival:m.rival+' vs. MM'}</div><div style="font-size:14px;font-weight:700;color:var(--gl)">${(!m.venue||m.venue==='local')?(m.scoreHome??0)+' – '+(m.scoreAway??0):(m.scoreAway??0)+' – '+(m.scoreHome??0)}</div></div>
-        <div class="card-sub">${new Date(m.date).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})} · ${m.location||''}</div>
-        ${m.competition?`<span class="comp-chip">${m.competition}</span>`:''}
-        ${m.status==='active'?'<span class="status-active" style="margin-left:6px">En curso</span>':''}
-      </div>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn-sm-out" style="flex:1;font-size:11px;padding:6px" onclick="showMatchActa('${m.id}')">Ver acta</button>
-        <button class="del-btn" style="font-size:11px;padding:6px 10px" onclick="deleteMatch('${m.id}')">Eliminar</button>
-      </div>
-    </div>`).join('');
+  if(snap.empty){el.innerHTML='<div class="empty-state">Aun no hay partidos registrados.</div>';return;}
+  const matches=snap.docs.map(function(d){return {id:d.id,...d.data()};}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  const statusLabel={scheduled:'Programado',active:'En curso',finished:'Finalizado'};
+  const statusColor={scheduled:'color:var(--blue)',active:'color:var(--green)',finished:'color:var(--m)'};
+  el.innerHTML=matches.map(function(m){
+    const isLocal=!m.venue||m.venue==='local';
+    const title=isLocal?'vs. '+m.rival:m.rival+' vs. MM';
+    const score=m.status==='finished'?(isLocal?(m.scoreHome||0)+' - '+(m.scoreAway||0):(m.scoreAway||0)+' - '+(m.scoreHome||0)):'';
+    const d=new Date(m.date).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+    const st=m.status||'scheduled';
+    return '<div class="match-item" data-id="'+m.id+'" data-status="'+st+'">'+
+      '<div class="card-row" style="margin-bottom:4px">'+
+        '<div class="card-title">'+title+'</div>'+
+        (score?'<div style="font-size:14px;font-weight:700;color:var(--gl)">'+score+'</div>':'')+
+      '</div>'+
+      '<div class="card-sub">'+d+(m.time?' · '+m.time:'')+(m.location?' · '+m.location:'')+'</div>'+
+      (m.competition?'<span class="comp-chip">'+m.competition+'</span>':'')+
+      ' <span style="font-size:10px;font-weight:700;'+statusColor[st]+'">● '+statusLabel[st]+'</span>'+
+      '<div style="display:flex;gap:6px;margin-top:8px">'+
+        (st==='scheduled'?'<button class="btn-sm-gold match-action" style="flex:1;font-size:11px;padding:6px">Convocar e iniciar</button>':'')+
+        (st==='active'?'<button class="btn-sm-gold match-action" style="flex:1;font-size:11px;padding:6px">Continuar partido</button>':'')+
+        (st==='finished'?'<button class="btn-sm-out match-action" style="flex:1;font-size:11px;padding:6px">Ver acta</button>':'')+
+        '<button class="del-btn match-delete" style="font-size:11px;padding:6px 10px">Eliminar</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  el.querySelectorAll('.match-item').forEach(function(item){
+    const id=item.dataset.id, st=item.dataset.status;
+    const actionBtn=item.querySelector('.match-action');
+    const delBtn=item.querySelector('.match-delete');
+    if(actionBtn){
+      actionBtn.addEventListener('click',function(){
+        if(st==='scheduled') openConvocatoria(id);
+        else if(st==='active') continueMatch(id);
+        else if(st==='finished') showMatchActa(id);
+      });
+    }
+    if(delBtn) delBtn.addEventListener('click',function(){deleteMatch(id);});
+  });
 }
 
-window.startMatch=async function(){
+window.saveScheduledMatch=async function(){
   const rival=document.getElementById('match-rival').value.trim();
   if(!rival){alert('Introduce el nombre del rival.');return;}
+  const venue=document.getElementById('match-venue').value;
+  await addDoc(collection(db,'matches'),{
+    category:currentCat, rival,
+    date:document.getElementById('match-date').value,
+    time:document.getElementById('match-time').value,
+    location:document.getElementById('match-location').value.trim(),
+    competition:document.getElementById('match-comp').value,
+    venue, scoreHome:0, scoreAway:0,
+    status:'scheduled', events:[], convocadas:[],
+    createdBy:currentUser.uid, createdAt:serverTimestamp()
+  });
+  alert('Partido programado guardado correctamente.');
+  await renderPartido();
+};
+
+window.startMatch=async function(){
+  // startMatch ahora recibe el id del partido programado
+  if(!window._startMatchId){alert('Error: no hay partido seleccionado.');return;}
   const convIds=window._convocadas?Array.from(window._convocadas):[];
   if(convIds.length===0){alert('Selecciona al menos una jugadora convocada.');return;}
-  const venue=document.getElementById('match-venue').value;
-  const ref=await addDoc(collection(db,'matches'),{
-    category:currentCat, rival, date:document.getElementById('match-date').value,
-    time:document.getElementById('match-time').value, location:document.getElementById('match-location').value.trim(),
-    competition:document.getElementById('match-comp').value, venue, scoreHome:0, scoreAway:0,
-    status:'active', events:[], convocadas:convIds, createdBy:currentUser.uid, createdAt:serverTimestamp()
+  await updateDoc(doc(db,'matches',window._startMatchId),{
+    status:'active', convocadas:convIds
   });
-  activeMatchId=ref.id; matchScoreHome=0; matchScoreAway=0; matchEvents=[];
-  await loadActiveMatch(ref.id);
+  activeMatchId=window._startMatchId;
+  window._startMatchId=null;
+  matchScoreHome=0; matchScoreAway=0; matchEvents=[];
+  await loadActiveMatch(activeMatchId);
 };
 
 window.loadActiveMatch=async function(id){
@@ -580,17 +567,7 @@ window.loadActiveMatch=async function(id){
       <button class="ev-btn" onclick="undoRivalGoal()" style="flex:1;font-size:12px;padding:7px 8px;border-color:rgba(224,85,85,.3);color:var(--red);opacity:.7">- Gol rival</button>
       <button class="ev-btn" onclick="undoLastEvent()" style="flex:1;font-size:12px;padding:7px 8px;border-color:rgba(201,162,39,.4);color:var(--gl)">↩ Deshacer</button>
     </div>
-    <div class="ev-panel" id="ev-panel">
-      <div class="ev-player" id="ev-player-name">Selecciona una jugadora/jugador</div>
-      <div class="ev-btns">
-        <button class="ev-btn gol" onclick="regEvent('gol','⚽ Gol')">⚽ Gol</button>
-        <button class="ev-btn ama" onclick="regEvent('amarilla','🟨 Amarilla')">🟨 Amarilla</button>
-        <button class="ev-btn roj" onclick="regEvent('roja','🟥 Roja')">🟥 Roja</button>
-        <button class="ev-btn azu" onclick="regEvent('azul','🟦 Azul')">🟦 Azul</button>
-        <button class="ev-btn exc" onclick="regEvent('exclusion','⏱ 2min')">⏱ 2min</button>
-      </div>
-      <div class="ev-log" id="ev-log"></div>
-    </div>
+    <div id="ev-panel-container"></div>
     <div class="section-title">Jugadores/as — ${m.category}</div>
     <div class="plist" id="match-plist"></div>
     ${invs.length>0?`<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De ${INV_MAP[m.category]}</span></div><div class="plist">${invs.map(p=>`<div class="prow" onclick="selMatchPlayer(this,'${p.id}','${p.name} ${p.surname||''}',${p.dorsal})"><div class="pnum inv">${p.dorsal}</div><div class="pname">${p.name} ${p.surname||''}<br><span class="psub">INVITAD@</span></div></div>`).join('')}</div>`:''}
@@ -683,12 +660,36 @@ window.cronoReset=function(){
 };
 
 window.selMatchPlayer=function(row,id,name,dorsal){
-  document.querySelectorAll('#match-plist .prow').forEach(r=>r.style.background='');
+  // Quitar selección previa y panel anterior
+  document.querySelectorAll('#match-plist .prow, #match-inv-list .prow').forEach(r=>{
+    r.style.background='';
+    const prev=r.nextElementSibling;
+    if(prev&&prev.classList.contains('inline-ev-panel')) prev.remove();
+  });
+  // Si es la misma jugadora, deseleccionar
+  if(matchSelPlayer&&matchSelPlayer.id===id){matchSelPlayer=null;return;}
   row.style.background='rgba(201,162,39,0.1)';
   matchSelPlayer={id,name,dorsal};
-  document.getElementById('ev-player-name').textContent=name+' — elige evento:';
-  document.getElementById('ev-panel').style.display='block';
-  document.getElementById('ev-log').textContent='';
+  // Crear panel inline debajo de la fila
+  const panel=document.createElement('div');
+  panel.className='inline-ev-panel';
+  panel.style.cssText='background:var(--s);border:.5px solid var(--bs);border-radius:0 0 10px 10px;padding:10px 12px;border-top:none;';
+  const evBtns=[
+    ['gol','gol','⚽ Gol'],['amarilla','ama','🟨 Amarilla'],
+    ['roja','roj','🟥 Roja'],['azul','azu','🟦 Azul'],['exclusion','exc','⏱ 2min']
+  ];
+  const btnsHtml=evBtns.map(function(b){
+    return '<button class="ev-btn '+b[1]+'" data-type="'+b[0]+'" data-label="'+b[2]+'">'+b[2]+'</button>';
+  }).join('');
+  panel.innerHTML='<div style="font-size:11px;color:var(--g);font-weight:700;margin-bottom:8px">'+name+'</div>'+
+    '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px" id="ev-btns-inline">'+btnsHtml+'</div>'+
+    '<div class="ev-log" id="ev-log" style="font-size:11px;color:var(--green);min-height:14px"></div>';
+  panel.querySelectorAll('.ev-btn[data-type]').forEach(function(btn){
+    btn.onclick=function(){regEvent(btn.dataset.type,btn.dataset.label);};
+  });
+  row.after(panel);
+  // Scroll suave al panel
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
 };
 
 window.regEvent=async function(type,label){
@@ -703,7 +704,7 @@ window.regEvent=async function(type,label){
   matchEvents.push(ev);
   await updateDoc(doc(db,'matches',activeMatchId),{scoreHome:matchScoreHome,events:matchEvents});
   const logEl=document.getElementById('ev-log');
-  if(logEl){logEl.style.color='var(--green)';logEl.textContent='OK: '+label+' registrado para '+matchSelPlayer.name;}
+  if(logEl){logEl.style.color='var(--green)';logEl.textContent='✓ '+label+' registrado';}
   const evList=document.getElementById('match-events-list');
   if(evList) evList.innerHTML=matchEvents.map(e=>'<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">'+e.label+'</div><div style="font-size:11px;color:var(--m)">'+e.playerName+'</div></div>').join('');
   const evCount=document.getElementById('ev-count');
@@ -728,6 +729,13 @@ window.undoLastEvent=async function(){
   await updateDoc(doc(db,'matches',activeMatchId),{scoreHome:matchScoreHome,events:matchEvents});
   const log=document.getElementById('ev-log');
   if(log){log.style.color='var(--gl)';log.textContent='Deshecho: '+last.label+' de '+last.playerName;}
+  // Deseleccionar jugadora actual
+  document.querySelectorAll('#match-plist .prow, #match-inv-list .prow').forEach(r=>{
+    r.style.background='';
+    const prev=r.nextElementSibling;
+    if(prev&&prev.classList.contains('inline-ev-panel')) prev.remove();
+  });
+  matchSelPlayer=null;
   const evSection=document.getElementById('match-events-list');
   if(evSection) evSection.innerHTML=matchEvents.length>0?matchEvents.map(e=>'<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">'+e.label+'</div><div style="font-size:11px;color:var(--m)">'+e.playerName+'</div></div>').join(''):'<div class="empty-state" style="padding:10px">Sin eventos</div>';
 };
@@ -754,6 +762,94 @@ window.addRivalGoal=async function(){
   const isLocal2=!snap2.data().venue||snap2.data().venue==='local';
   document.getElementById(isLocal2?'score-right':'score-left').textContent=matchScoreAway;
   await updateDoc(doc(db,'matches',activeMatchId),{scoreAway:matchScoreAway});
+};
+
+window.openConvocatoria=async function(matchId){
+  // Cargar datos del partido y mostrar convocatoria
+  const snap=await getDoc(doc(db,'matches',matchId));
+  if(!snap.exists()) return;
+  const m={id:snap.id,...snap.data()};
+  window._startMatchId=matchId;
+  const el=document.getElementById('partido-content');
+  const allPlayers=await getPlayers(m.category);
+  const allInvs=await getInvitadas(m.category);
+  el.innerHTML=`
+    <div class="card" style="border-color:var(--bs);margin-bottom:14px">
+      <div style="color:var(--g);font-size:13px;font-weight:700">${(!m.venue||m.venue==='local')?'vs. '+m.rival:m.rival+' vs. MM'}</div>
+      <div style="color:var(--m);font-size:12px;margin-top:3px">${new Date(m.date).toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})} · ${m.time||''} · ${m.location||''}</div>
+      ${m.competition?'<span class="comp-chip">'+m.competition+'</span>':''}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title" style="margin:0">Convocatoria — toca para incluir/excluir</div>
+      <span style="font-size:10px;color:var(--m)" id="conv-count">0 convocadas</span>
+    </div>
+    <div class="plist" id="conv-list"></div>
+    ${allInvs.length>0?'<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De '+(INV_MAP[m.category]||'')+'</span></div><div class="plist" id="conv-inv-list"></div>':''}
+    <button class="btn-sm-gold" style="width:100%;margin-top:12px;padding:13px" onclick="startMatch()">Iniciar partido</button>
+    <button class="btn-sm-out" style="width:100%;margin-top:8px" onclick="renderPartido()">Volver</button>
+  `;
+  const convList=document.getElementById('conv-list');
+  const convInvList=document.getElementById('conv-inv-list');
+  let convocadas=new Set(allPlayers.map(p=>p.id));
+  function renderCL(){
+    if(!convList) return;
+    convList.innerHTML=allPlayers.map(p=>{
+      const sel=convocadas.has(p.id);
+      return '<div class="prow conv-row" data-id="'+p.id+'" style="cursor:pointer;background:'+(sel?'rgba(201,162,39,0.1)':'')+'">'+
+        '<div class="pnum" style="background:'+(sel?'var(--gp)':'var(--s)')+';border-color:'+(sel?'var(--bs)':'var(--br)')+';color:'+(sel?'var(--g)':'var(--m)')+'">'+p.dorsal+'</div>'+
+        '<div class="pname">'+p.name+(p.surname?' '+p.surname:'')+'</div>'+
+        '<span style="font-size:11px;color:'+(sel?'var(--green)':'var(--red)')+';">'+(sel?'✓':'✗')+'</span>'+
+      '</div>';
+    }).join('');
+    convList.querySelectorAll('.conv-row').forEach(row=>{
+      row.onclick=function(){
+        const id=row.dataset.id;
+        if(convocadas.has(id)) convocadas.delete(id); else convocadas.add(id);
+        renderCL(); renderCI(); updateCC();
+      };
+    });
+  }
+  function renderCI(){
+    if(!convInvList) return;
+    convInvList.innerHTML=allInvs.map(p=>{
+      const sel=convocadas.has(p.id);
+      return '<div class="prow conv-inv-row" data-id="'+p.id+'" style="cursor:pointer;background:'+(sel?'rgba(85,153,232,0.1)':'')+'">'+
+        '<div class="pnum inv" style="opacity:'+(sel?1:0.4)+'">'+p.dorsal+'</div>'+
+        '<div class="pname">'+p.name+(p.surname?' '+p.surname:'')+'<br><span class="psub">INVITAD@</span></div>'+
+        '<span style="font-size:11px;color:'+(sel?'var(--green)':'var(--red)')+';">'+(sel?'✓':'✗')+'</span>'+
+      '</div>';
+    }).join('');
+    convInvList.querySelectorAll('.conv-inv-row').forEach(row=>{
+      row.onclick=function(){
+        const id=row.dataset.id;
+        if(convocadas.has(id)) convocadas.delete(id); else convocadas.add(id);
+        renderCL(); renderCI(); updateCC();
+      };
+    });
+  }
+  function updateCC(){
+    const el2=document.getElementById('conv-count');
+    if(el2) el2.textContent=convocadas.size+' convocadas';
+  }
+  window._convocadas=convocadas;
+  renderCL(); renderCI(); updateCC();
+};
+
+window.colabEnterMatch=function(matchId){
+  continueMatch(matchId);
+  goTo('partido',document.querySelector('[data-screen=partido]'));
+};
+
+window.continueMatch=async function(matchId){
+  activeMatchId=matchId;
+  const snap=await getDoc(doc(db,'matches',matchId));
+  if(snap.exists()){
+    const m=snap.data();
+    matchScoreHome=m.scoreHome||0;
+    matchScoreAway=m.scoreAway||0;
+    matchEvents=m.events||[];
+  }
+  await loadActiveMatch(matchId);
 };
 
 window.deleteMatch=async function(id){
