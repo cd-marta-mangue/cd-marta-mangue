@@ -73,6 +73,18 @@
     .pnum.inv{background:var(--blue-bg);border-color:var(--blue-border);color:var(--blue)}
     .pname{flex:1;font-size:13px;color:var(--t)}
     .psub{font-size:10px;color:var(--m)}
+    /* Fila de jugadora en partido con botones siempre visibles */
+    .match-prow{display:flex;flex-direction:column;padding:8px 13px;border-bottom:.5px solid var(--br);gap:6px}
+    .match-prow:last-child{border-bottom:none}
+    .match-prow-top{display:flex;align-items:center;gap:10px}
+    .match-ev-btns{display:flex;gap:5px;flex-wrap:wrap;padding-left:40px}
+    .mev-btn{padding:5px 9px;border-radius:7px;font-size:11px;background:var(--s);border:.5px solid var(--br);cursor:pointer;color:var(--t);font-weight:600;flex-shrink:0}
+    .mev-btn.gol{border-color:rgba(125,201,125,.5);color:var(--green);background:rgba(125,201,125,.08)}
+    .mev-btn.ama{border-color:rgba(232,200,74,.5);color:var(--gl);background:rgba(232,200,74,.08)}
+    .mev-btn.roj{border-color:rgba(224,85,85,.5);color:var(--red);background:rgba(224,85,85,.08)}
+    .mev-btn.azu{border-color:rgba(106,176,245,.5);color:var(--blue);background:rgba(106,176,245,.08)}
+    .mev-btn.exc{border-color:rgba(224,160,85,.5);color:#e0a055;background:rgba(224,160,85,.08)}
+    .mev-btn:active{opacity:.7;transform:scale(.96)}
     .form-card{background:var(--d);border:.5px solid var(--bs);border-radius:12px;padding:16px;margin-bottom:12px}
     .form-title{font-size:11px;color:var(--g);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
     .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
@@ -576,26 +588,13 @@ window.loadActiveMatch=async function(id){
       ${matchEvents.length>0?matchEvents.map(e=>`<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">${e.label}</div><div style="font-size:11px;color:var(--m)">${e.playerName}</div></div>`).join(''):'<div class="empty-state" style="padding:10px">Sin eventos aún</div>'}
     </div>
     <button class="btn-gold" style="width:100%;margin-top:8px" onclick="finishMatch()">Finalizar y guardar partido</button>`;
-  // Renderizar jugadoras directamente en el innerHTML
+  // Renderizar jugadoras con botones siempre visibles
   const plist=document.getElementById('match-plist');
   if(plist){
     if(players.length===0){
       plist.innerHTML='<div class="empty-state">Sin jugadores/as en esta categoría.</div>';
     } else {
-      plist.innerHTML=players.map(p=>{
-        const fullName=p.name+(p.surname?' '+p.surname:'');
-        const div=document.createElement('div');
-        div.className='prow';
-        div.innerHTML='<div class="pnum">'+p.dorsal+'</div><div class="pname">'+fullName+'</div>';
-        div.onclick=function(){selMatchPlayer(div,p.id,fullName,p.dorsal);};
-        return div.outerHTML;
-      }).join('');
-      // Re-asignar onclick porque outerHTML pierde los handlers
-      plist.querySelectorAll('.prow').forEach((row,i)=>{
-        const p=players[i];
-        const fullName=p.name+(p.surname?' '+p.surname:'');
-        row.onclick=function(){selMatchPlayer(row,p.id,fullName,p.dorsal);};
-      });
+      renderMatchPlayerRows(plist, players, false);
     }
   }
   // Renderizar INVITAD@S
@@ -604,18 +603,52 @@ window.loadActiveMatch=async function(id){
     invSection.innerHTML='<div class="inv-header"><span class="inv-tag">INVITAD@S</span><span style="font-size:11px;color:var(--m)">De '+INV_MAP[m.category]+'</span></div>';
     const invList=document.createElement('div');
     invList.className='plist';
-    invList.innerHTML=invs.map(p=>{
-      const fullName=p.name+(p.surname?' '+p.surname:'');
-      return '<div class="prow" data-id="'+p.id+'" data-name="'+fullName+'" data-dorsal="'+p.dorsal+'"><div class="pnum inv">'+p.dorsal+'</div><div class="pname">'+fullName+'<br><span class="psub">INVITAD@</span></div></div>';
-    }).join('');
-    invList.querySelectorAll('.prow').forEach(row=>{
-      const id=row.dataset.id, name=row.dataset.name, dorsal=parseInt(row.dataset.dorsal);
-      row.onclick=function(){selMatchPlayer(row,id,name,dorsal);};
-    });
+    renderMatchPlayerRows(invList, invs, true);
     plist.after(invSection);
     invSection.after(invList);
   }
 };
+
+function renderMatchPlayerRows(container, players, isInv){
+  container.innerHTML='';
+  players.forEach(p=>{
+    const fullName=p.name+(p.surname?' '+p.surname:'');
+    const row=document.createElement('div');
+    row.className='match-prow';
+    // Fila superior: dorsal + nombre + feedback
+    const top=document.createElement('div');
+    top.className='match-prow-top';
+    top.innerHTML=
+      '<div class="pnum'+(isInv?' inv':'')+'">'+p.dorsal+'</div>'+
+      '<div class="pname">'+fullName+(isInv?'<br><span class="psub">INVITAD@</span>':'')+'</div>'+
+      '<span class="mev-log" style="font-size:10px;color:var(--green);min-width:60px;text-align:right"></span>';
+    // Fila de botones siempre visibles
+    const btns=document.createElement('div');
+    btns.className='match-ev-btns';
+    const evDefs=[
+      {type:'gol',cls:'gol',label:'⚽ Gol'},
+      {type:'amarilla',cls:'ama',label:'🟨'},
+      {type:'roja',cls:'roj',label:'🟥'},
+      {type:'azul',cls:'azu',label:'🟦'},
+      {type:'exclusion',cls:'exc',label:'⏱ 2\''}
+    ];
+    evDefs.forEach(ev=>{
+      const btn=document.createElement('button');
+      btn.className='mev-btn '+ev.cls;
+      btn.textContent=ev.label;
+      btn.onclick=async function(e){
+        e.stopPropagation();
+        await regEventDirect(p.id,fullName,p.dorsal,ev.type,ev.label);
+        const log=top.querySelector('.mev-log');
+        if(log){log.textContent='✓ '+ev.label;setTimeout(()=>{log.textContent='';},1500);}
+      };
+      btns.appendChild(btn);
+    });
+    row.appendChild(top);
+    row.appendChild(btns);
+    container.appendChild(row);
+  });
+}
 
 let cronoInterval=null, cronoSeconds=0, cronoRunning=false;
 
@@ -694,17 +727,21 @@ window.selMatchPlayer=function(row,id,name,dorsal){
 
 window.regEvent=async function(type,label){
   if(!matchSelPlayer)return;
+  await regEventDirect(matchSelPlayer.id,matchSelPlayer.name,matchSelPlayer.dorsal,type,label);
+  const logEl=document.getElementById('ev-log');
+  if(logEl){logEl.style.color='var(--green)';logEl.textContent='✓ '+label+' registrado';}
+};
+
+window.regEventDirect=async function(playerId,playerName,dorsal,type,label){
   if(type==='gol'){
     matchScoreHome++;
     const snap2=await getDoc(doc(db,'matches',activeMatchId));
     const isLocal2=!snap2.data().venue||snap2.data().venue==='local';
     document.getElementById(isLocal2?'score-left':'score-right').textContent=matchScoreHome;
   }
-  const ev={type,label,playerId:matchSelPlayer.id,playerName:matchSelPlayer.name,ts:new Date().toISOString()};
+  const ev={type,label,playerId,playerName,ts:new Date().toISOString()};
   matchEvents.push(ev);
   await updateDoc(doc(db,'matches',activeMatchId),{scoreHome:matchScoreHome,events:matchEvents});
-  const logEl=document.getElementById('ev-log');
-  if(logEl){logEl.style.color='var(--green)';logEl.textContent='✓ '+label+' registrado';}
   const evList=document.getElementById('match-events-list');
   if(evList) evList.innerHTML=matchEvents.map(e=>'<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">'+e.label+'</div><div style="font-size:11px;color:var(--m)">'+e.playerName+'</div></div>').join('');
   const evCount=document.getElementById('ev-count');
@@ -729,13 +766,6 @@ window.undoLastEvent=async function(){
   await updateDoc(doc(db,'matches',activeMatchId),{scoreHome:matchScoreHome,events:matchEvents});
   const log=document.getElementById('ev-log');
   if(log){log.style.color='var(--gl)';log.textContent='Deshecho: '+last.label+' de '+last.playerName;}
-  // Deseleccionar jugadora actual
-  document.querySelectorAll('#match-plist .prow, #match-inv-list .prow').forEach(r=>{
-    r.style.background='';
-    const prev=r.nextElementSibling;
-    if(prev&&prev.classList.contains('inline-ev-panel')) prev.remove();
-  });
-  matchSelPlayer=null;
   const evSection=document.getElementById('match-events-list');
   if(evSection) evSection.innerHTML=matchEvents.length>0?matchEvents.map(e=>'<div class="prow"><div style="flex:1;font-size:12px;color:var(--t)">'+e.label+'</div><div style="font-size:11px;color:var(--m)">'+e.playerName+'</div></div>').join(''):'<div class="empty-state" style="padding:10px">Sin eventos</div>';
 };
